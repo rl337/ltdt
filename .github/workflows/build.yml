@@ -18,7 +18,7 @@ jobs:
         id: build
         uses: manleydev/build-godot-action@v1.4.1
         with:
-          name: example
+          name: ltdt-${{ matrix.platform }}-${{ GITHUB_REF_NAME }}.zip
           preset: ${{ matrix.platform }}
           debugMode: "true"
       - name: Upload Artifact
