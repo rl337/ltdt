@@ -12,7 +12,7 @@ jobs:
       matrix:
         platform: [linux, windows, mac]
     env:
-        VERSION: ${{ GITHUB_REF_NAME || 'devel' }}
+        VERSION: ${{ github.ref_name || 'devel' }}
     steps:
       - uses: actions/checkout@v2
         with:
