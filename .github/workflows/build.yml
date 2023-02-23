@@ -29,3 +29,12 @@ jobs:
         with:
           name: ltdt-${{ matrix.platform }}-${{ env.VERSION }}.zip
           path: ${{ github.workspace }}/${{ steps.build.outputs.build }}
+      - name: "Create Release"
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          title: ${{ env.VERSION }}
+          files: |
+            LICENSE.*
+            *.zip
