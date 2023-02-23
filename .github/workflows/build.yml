@@ -6,7 +6,8 @@ on:
       - v0.**
 
 jobs:
-  Godot:
+  Release:
+    environment: main
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -32,7 +33,7 @@ jobs:
       - name: "Create Release"
         uses: "marvinpinto/action-automatic-releases@latest"
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          repo_token: "${{ secrets.RELEASE_TOKEN }}"
           prerelease: false
           title: ${{ env.VERSION }}
           files: |
