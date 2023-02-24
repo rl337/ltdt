@@ -25,6 +25,7 @@ jobs:
           name: ltdt-${{ matrix.platform }}-${{ env.VERSION }}.zip
           preset: ${{ matrix.platform }}
           debugMode: "true"
+          package: "true"
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -38,5 +39,4 @@ jobs:
           automatic_release_tag: ${{ matrix.platform }}-latest
           title: ${{matrix.platform}}-${{ env.VERSION }}
           files: |
-            LICENSE.*
-            *.zip
+            ${{ github.workspace }}/${{ steps.build.outputs.build }}/*.zip
