@@ -29,9 +29,9 @@ fi
 # $1 = specific api, example v1/completions
 # $2 = data
 openai() {
-    _X_FULL_API_URL="$OPENAI_BASE_URL/$1"
+    _X_FULL_API_URL="$OPENAI_API_BASE_URL/$1"
     
-    curl -s https://api.openai.com/v1/completions \
+    curl -s "$_X_FULL_API_URL" \
         -H 'Content-Type: application/json' \
         -H "Authorization: Bearer $OPENAI_API_KEY" \
         -d "$2"
@@ -44,42 +44,48 @@ openai() {
 # $1 = model to use
 # $2 = prompt_file
 # $3 = max_tokens
-completion() {
+completions() {
 
 _X_PROMPT=$(cat "$2")
-_X_DATA=$(cat <<END
-{
-   "model": "$1",
-   "prompt": "$_X_PROMPT",
-   "max_tokens": $3
-}
-END
+
+_X_DATA=$( jq -n \
+  --arg model "$1" \
+  --arg prompt "$_X_PROMPT" \
+  --arg max_tokens "$3" \
+  '{model: $model, prompt: $prompt, max_tokens: $max_tokens|fromjson}'
 )
 
     openai "v1/completions" "$_X_DATA" 
 }
 
-if [ "X$1" == "X" ]; then
-    fatal "Usage: $0 <initial prompt>"
-fi
+
+# $1 prompt_file
+# $2 size 1024x1024, 512x512, 256x256
+images_generations() {
+
+_X_PROMPT=$(cat "$1")
+_X_DATA=$(cat <<END
+{
+   "prompt": "$_X_PROMPT",
+   "n": 1,
+   "size": "$2",
+   "response_format": "b64_json"
+}
+END
+)
+
+    openai "v1/images/generations" "$_X_DATA"
+}
+
 
 # $1 = response file
-extract_response() {
-    cat "$1" | jq --raw-output '.choices[0].text'
+extract_completions_response() {
+    cat "$1" | jq -e --raw-output '.choices[0].text'
     if [ $? -ne 0 ]; then
         fatal "Could not extract response from $1"
     fi
 }
 
-ORIGINAL_PROMPT_FILE="$SCRATCH_DIR/original_prompt.txt"
-if [ ! -f "$ORIGINAL_PROMPT_FILE" ]; then
-    # record and store the original user prompt
-    echo "$1" > "$ORIGINAL_PROMPT_FILE"
-    info "Using initial prompt: $1"
-    info "Creating Original prompt file: $ORIGINAL_PROMPT_FILE"
-else
-    info "Original prompt File already exists: $ORIGINAL_PROMPT_FILE"
-fi
 
 # $1 file to append from
 # $2 destination file
@@ -93,9 +99,29 @@ append_prompt_file() {
         fatal "file to append to does not exist: $2"
     fi
 
-    cat "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' >> "$2"
+    cat "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g" >> "$2"
     if [ $? -ne 0 ]; then
         fatal "Could not append $1 to $2"
+    fi
+}
+
+# $1 string to append 
+# $2 destination file
+append_string_to_prompt_file() {
+    if [ ! -f "$2" ]; then
+        fatal "file to append to does not exist: $2"
+    fi
+
+    _X_ADDENDUM=`echo -n "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g"`
+    cat "$2" | grep "$_X_ADDENDUM" > /dev/null
+    if [ $? -eq 0 ]; then
+        info "String already appended to $2"
+        return 0
+    fi
+
+    echo -n "$_X_ADDENDUM"  >> "$2"
+    if [ $? -ne 0 ]; then
+        fatal "Could not add to prompt file: $1"
     fi
 }
 
@@ -108,7 +134,7 @@ create_prompt_file() {
         return
     fi
 
-    echo -n "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g'  > "$2"
+    echo -n "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g"  > "$2"
     if [ $? -ne 0 ]; then
         fatal "Could not create prompt file: $1"
     fi
@@ -119,7 +145,6 @@ create_prompt_file() {
 
     append_prompt_file "$3" "$2"
 }
-
 
 
 # $1 prompt file
@@ -139,17 +164,64 @@ generate_completion_from_prompt() {
 
     _TMP_RESPONSE_FILE="${SCRATCH_DIR}/${2}_response.json"
     if [ ! -f "$_TMP_RESPONSE_FILE" ]; then
-        completion $OPENAI_TEXT_MODEL "$1" 2048 > "$_TMP_RESPONSE_FILE"
+        completions $OPENAI_TEXT_MODEL "$1" 2048 > "$_TMP_RESPONSE_FILE"
     else
         info "response for $2 already exists: $_TMP_RESPONSE_FILE"
     fi
 
     if [ "X$4" == "X" ]; then
-        extract_response "$_TMP_RESPONSE_FILE" > "$3"
+        extract_completions_response "$_TMP_RESPONSE_FILE" > "$3"
     else
-        extract_response "$_TMP_RESPONSE_FILE" | grep "$4" > "$3"
+        extract_completions_response "$_TMP_RESPONSE_FILE" | grep "$4" > "$3"
     fi
 }
+
+# $1 prompt file
+# $2 image_name
+# $3 output file
+generate_image_from_prompt() {
+    if [ ! -f "$1" ]; then
+        fatal "prompt file does not exist $1"
+    fi
+
+    if [ -f "$3" ]; then
+        info "output file for $2 already exists: $3"
+        return 0
+    fi
+
+    _TMP_RESPONSE_FILE="${SCRATCH_DIR}/${2}_response.json"
+    if [ ! -f "$_TMP_RESPONSE_FILE" ]; then
+        images_generations "$1" 1024x1024 > "$_TMP_RESPONSE_FILE"
+    else
+        info "response for $2 already exists: $_TMP_RESPONSE_FILE"
+    fi
+
+    _TMP_BASE64_FILE="${SCRATCH_DIR}/${2}.base64"
+    jq -e --raw-output '.data[0].b64_json' "$_TMP_RESPONSE_FILE" > "$_TMP_BASE64_FILE"
+    if [ $? -ne 0 ]; then
+        fatal "Could not extract base64 data from $_TMP_RESPONSE_FILE"
+    fi
+
+    base64 -d "$_TMP_BASE64_FILE" > "$3"
+    if [ $? -ne 0 ]; then
+        fatal "Could not decode base64 data from $_TMP_BASE64_FILE"
+    fi
+}
+
+
+if [ "X$1" == "X" ]; then
+    fatal "Usage: $0 <initial prompt>"
+fi
+
+ORIGINAL_PROMPT_FILE="$SCRATCH_DIR/original_prompt.txt"
+if [ ! -f "$ORIGINAL_PROMPT_FILE" ]; then
+    # record and store the original user prompt
+    echo "$1" > "$ORIGINAL_PROMPT_FILE"
+    info "Using initial prompt: $1"
+    info "Creating Original prompt file: $ORIGINAL_PROMPT_FILE"
+else
+    info "Original prompt File already exists: $ORIGINAL_PROMPT_FILE"
+fi
 
 # create the initial complete prompt file with prompt instruction
 INITIAL_PROMPT_PREAMBLE="Given the following prompt, if not already specified choose a setting from an arbitrary selection of top 25 countries by GDP other than the United States, summarize a story using the Pixar method.  the story should take place in a few key concrete locations and involve both main characters and supporting roles.  For each of the roles if the role represents more than one individual character create a few representative individuals. Give each character a full name an age and description. Create a detailed description of this context including all locations, characters and a synopsis of how all of the story elements are related. "
@@ -184,5 +256,29 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
     create_prompt_file "$CHARACTER_CONTEXT_PREAMBLE" "$CHARACTER_CONTEXT_PROMPT_FILE" "$MAIN_CONTEXT_FILE"
 
     CHARACTER_CONTEXT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_context.txt"
-    generate_completion_from_prompt "$CHARACTER_LIST_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_context" "$CHARACTER_CONTEXT_FILE"
+    generate_completion_from_prompt "$CHARACTER_CONTEXT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_context" "$CHARACTER_CONTEXT_FILE"
+
+    CHARACTER_DETAIL_PREAMBLE="given the following context describe the character $CHARACTER_NAME create a detailed physical description of the character including physical features that make them stand out as well as any possessions they will always have on themselves.  The description should also include clothing preferences. "
+    CHARACTER_DETAIL_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_detail_prompt.txt"
+
+    create_prompt_file "$CHARACTER_DETAIL_PREAMBLE" "$CHARACTER_DETAIL_PROMPT_FILE" "$CHARACTER_CONTEXT_FILE"
+
+    CHARACTER_DETAIL_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_detail.txt"
+    generate_completion_from_prompt "$CHARACTER_DETAIL_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_detail" "$CHARACTER_DETAIL_FILE"
+
+    CHARACTER_PORTRAIT_CONTEXT_PREAMBLE="write a DALL-E prompt for a portrait of the following person that is no longer than 900 characters long. "
+    CHARACTER_PORTRAIT_CONTEXT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_context_prompt.txt"
+    create_prompt_file "$CHARACTER_PORTRAIT_CONTEXT_PREAMBLE" "$CHARACTER_PORTRAIT_CONTEXT_PROMPT_FILE" "$CHARACTER_DETAIL_FILE"
+
+    CHARACTER_PORTRAIT_CONTEXT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_context.txt"
+    generate_completion_from_prompt "$CHARACTER_PORTRAIT_CONTEXT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait_context" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
+
+    CHARACTER_PORTRAIT_PREAMBLE="take a photographic portrait with a 35mm lens of the following character"
+    CHARACTER_PORTRAIT_SUFFIX="35mm, fujifilm, dramatic lighting, cinematic, 4k"
+    CHARACTER_PORTRAIT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_prompt.txt"
+    create_prompt_file "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_PROMPT_FILE" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
+    append_string_to_prompt_file "$CHARACTER_PORTRAIT_SUFFIX" "$CHARACTER_PORTRAIT_PROMPT_FILE"
+
+    CHARACTER_PORTRAIT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait.jpg"
+    generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait" "$CHARACTER_PORTRAIT_FILE"
 done
