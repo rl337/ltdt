@@ -1,9 +1,7 @@
 #!/bin/bash
 
 OPENAI_API_BASE_URL="https://api.openai.com"
-SCRATCH_DIR=/tmp
 OPENAI_TEXT_MODEL=text-davinci-003
-
 
 mesg() {
     _X_PREFIX=`date`
@@ -26,10 +24,64 @@ if [ "X$OPENAI_API_KEY" == "X" ]; then
 fi
 
 
+DEBUG_LOREM_IPSUM_COMPLETION="\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus tristique luctus tellus quis accumsan. Morbi blandit, nibh faucibus vehicula gravida, sem neque tempus libero, dapibus porta ante lorem semper tortor. Donec purus nisi, porttitor vel pharetra nec, pharetra sed purus. Etiam rutrum condimentum mi ut tristique."
+DEBUG_CHARACTER_LIST_COMPLETION="\n\nList of Characters in csv format:\n\ncharacter_Lorem_Ipsum.json,Lorem Ipsum,dolor sit amet\ncharacter_consectetur_elit.json,Consectetur Elit, Vivamus tristique luctus tellus "
+DEBUG_CHARACTER_ATTRIBUTES_COMPLETION="\n\nList of Character Attributes in csv format:\n\nname,Lorem Ipsum\nage,dolor\nsex,sit\nhair color,amet\nbirthdate,consectetur\nzodiac sign,elit\nblood type,vivamus "
+
+
+# name, age, sex, hair color, eye color, birthdate, zodiac sign and blood type.
+# $1 = specific api
+# $2 = data
+debug_openai() {
+
+    _X_CALL_DATE=`date '+%s'`
+
+    case "$1" in
+        
+        v1/completions)
+            _X_COMPLETION_DATA="$DEBUG_LOREM_IPSUM_COMPLETION"
+            echo "$2" | grep 'csv format' > /dev/null
+            if [ $? -eq 0 ]; then
+                _X_COMPLETION_DATA="$DEBUG_CHARACTER_LIST_COMPLETION"
+                echo "$2" | grep 'character attributes' > /dev/null
+                if [ $? -eq 0 ]; then
+                    _X_COMPLETION_DATA="$DEBUG_CHARACTER_ATTRIBUTES_COMPLETION"
+                fi 
+            fi
+_X_DATA=$(cat <<END
+{"id":"cmpl-6onzloyRUV3oIUZQag98WE4qp8cmc","object":"text_completion","created":$_X_CALL_DATE,"model":"$OPENAI_TEXT_MODEL","choices":[{"text":"$_X_COMPLETION_DATA","index":0,"logprobs":null,"finish_reason":null}],"usage":{"prompt_tokens":265,"completion_tokens":105,"total_tokens":370}}
+END
+)
+            ;;
+        v1/images/generations)
+_X_DATA=$(cat <<END
+{
+  "created": $_X_CALL_DATE,
+  "data": [
+    {
+      "b64_json": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
+    }
+  ]
+}
+END
+)
+            ;;
+        *)
+            fatal "Unknown api call $1"
+    esac
+    echo -n "$_X_DATA"
+}
+
+
 # $1 = specific api, example v1/completions
 # $2 = data
 openai() {
     _X_FULL_API_URL="$OPENAI_API_BASE_URL/$1"
+
+    if [ "X$DEBUG" != "X" ]; then
+        debug_openai "$1" "$2" 
+        return $?
+    fi
     
     curl -s "$_X_FULL_API_URL" \
         -H 'Content-Type: application/json' \
@@ -39,6 +91,7 @@ openai() {
         fatal "Could not curl $_X_FULL_API_URL"
     fi
 }
+
 
 
 # $1 = model to use
@@ -176,6 +229,7 @@ generate_completion_from_prompt() {
     fi
 }
 
+
 # $1 prompt file
 # $2 image_name
 # $3 output file
@@ -210,21 +264,36 @@ generate_image_from_prompt() {
 
 
 if [ "X$1" == "X" ]; then
-    fatal "Usage: $0 <initial prompt>"
+    fatal "Usage: $0 <story_id> <initial_prompt>"
+fi
+STORY_ID="$1"
+
+if [ "X$2" == "X" ]; then
+    fatal "Usage: $0 <story_id> <original_prompt>"
+fi
+
+DATA_DIR=./stories
+SCRATCH_DIR="$DATA_DIR/$STORY_ID"
+
+if [ ! -d "$SCATCH_DIR" ]; then
+    mkdir -p "$SCRATCH_DIR"
+    if [ $? -ne 0 ]; then
+        fatal "Could not create scratch directory $SCRATCH_DIR"
+    fi
 fi
 
 ORIGINAL_PROMPT_FILE="$SCRATCH_DIR/original_prompt.txt"
 if [ ! -f "$ORIGINAL_PROMPT_FILE" ]; then
     # record and store the original user prompt
-    echo "$1" > "$ORIGINAL_PROMPT_FILE"
-    info "Using initial prompt: $1"
+    echo "$2" > "$ORIGINAL_PROMPT_FILE"
+    info "Using initial prompt: $2"
     info "Creating Original prompt file: $ORIGINAL_PROMPT_FILE"
 else
     info "Original prompt File already exists: $ORIGINAL_PROMPT_FILE"
 fi
 
 # create the initial complete prompt file with prompt instruction
-INITIAL_PROMPT_PREAMBLE="Given the following prompt, if not already specified choose a setting from an arbitrary selection of top 25 countries by GDP other than the United States, summarize a story using the Pixar method.  the story should take place in a few key concrete locations and involve both main characters and supporting roles.  For each of the roles if the role represents more than one individual character create a few representative individuals. Give each character a full name an age and description. Create a detailed description of this context including all locations, characters and a synopsis of how all of the story elements are related. "
+INITIAL_PROMPT_PREAMBLE="Given the following prompt, if not already specified choose a setting from an arbitrary selection of top 25 countries by GDP other than the United States. If not already specified, choose an arbitrary time period for the story.  valid time periods are prehistoric, feudal, renaissance, post industrial, modern, or futuristic. Summarize a story using the Pixar method.  the story should take place in a few key concrete locations and involve both main characters and supporting roles.  For each of the roles if the role represents more than one individual character create a two or three representative individuals. Give each character a full name an age and description. Create a detailed description of this context including all locations, characters and a synopsis of how all of the story elements are related. "
 
 INITIAL_PROMPT_FILE="$SCRATCH_DIR/initial_prompt.txt"
 create_prompt_file "$INITIAL_PROMPT_PREAMBLE" "$INITIAL_PROMPT_FILE" "$ORIGINAL_PROMPT_FILE"
@@ -233,7 +302,7 @@ MAIN_CONTEXT_FILE="$SCRATCH_DIR/main_context.txt"
 info "Creating main context file: $MAIN_CONTEXT_FILE"
 generate_completion_from_prompt "$INITIAL_PROMPT_FILE" main_context "$MAIN_CONTEXT_FILE"
 
-CHARACTER_LIST_PREAMBLE="Given the following context For each of the roles if the role represents more than one individual character create a few representative individuals. Give each character a full name, sex, age and description. create a list of all characters in the story in csv format where the first column is a unix filename based on the name of the character with spaces converted into underscores and is prefixed with character and has a .json extension.  The second column is the full name of the character.  The third column is a brief description of the character's role in the story."
+CHARACTER_LIST_PREAMBLE="Given the following context For each of the roles if the role represents more than one individual character create two or three representative individuals. Give each character a full name, age, sex, hair color, eye color, birth date, a zodiac sign consistent with their birth date, blood type and description. create a list of all characters in the story in csv format where the first column is a unix filename based on the name of the character with spaces converted into underscores and is prefixed with character and has a .json extension.  The second column is the full name of the character.  The third column is a brief description of the character's role in the story."
 CHARACTER_LIST_PROMPT_FILE="$SCRATCH_DIR/character_list_prompt.txt"
 create_prompt_file "$CHARACTER_LIST_PREAMBLE" "$CHARACTER_LIST_PROMPT_FILE" "$MAIN_CONTEXT_FILE"
 
@@ -250,26 +319,29 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
     fi
     CHARACTER_NAME=`echo -n "$CHARACTER_ROW" | cut -f 2 -d,`
 
-    CHARACTER_CONTEXT_PREAMBLE="given the following context describe the character $CHARACTER_NAME, their motivations their life before the story and their role in the story. "
+    info "Generating character: $CHARACTER_NAME"
 
+    CHARACTER_CONTEXT_PREAMBLE="given the following context describe the character $CHARACTER_NAME, their motivations their life before the story and their role in the story details should also include age, sex, hair color, eye color, birth date, a zodiac sign consistent with their birth date, and blood type"
     CHARACTER_CONTEXT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_context_prompt.txt"
     create_prompt_file "$CHARACTER_CONTEXT_PREAMBLE" "$CHARACTER_CONTEXT_PROMPT_FILE" "$MAIN_CONTEXT_FILE"
-
     CHARACTER_CONTEXT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_context.txt"
     generate_completion_from_prompt "$CHARACTER_CONTEXT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_context" "$CHARACTER_CONTEXT_FILE"
 
+    CHARACTER_ATTRIBUTES_PREAMBLE="given the following character information create a list of character attributes in csv format list where the first column is the name of an attribute and the second column is the value based on the character description. The rows are name, age, sex, hair color, eye color, birthdate, zodiac sign and blood type."
+    CHARACTER_ATTRIBUTES_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_attributes_prompt.txt"
+    create_prompt_file "$CHARACTER_ATTRIBUTES_PREAMBLE" "$CHARACTER_ATTRIBUTES_PROMPT_FILE" "$CHARACTER_CONTEXT_FILE"
+    CHARACTER_ATTRIBUTES_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_attributes.txt"
+    generate_completion_from_prompt "$CHARACTER_ATTRIBUTES_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_attributes" "$CHARACTER_ATTRIBUTES_FILE"
+
     CHARACTER_DETAIL_PREAMBLE="given the following context describe the character $CHARACTER_NAME create a detailed physical description of the character including physical features that make them stand out as well as any possessions they will always have on themselves.  The description should also include clothing preferences. "
     CHARACTER_DETAIL_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_detail_prompt.txt"
-
     create_prompt_file "$CHARACTER_DETAIL_PREAMBLE" "$CHARACTER_DETAIL_PROMPT_FILE" "$CHARACTER_CONTEXT_FILE"
-
     CHARACTER_DETAIL_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_detail.txt"
     generate_completion_from_prompt "$CHARACTER_DETAIL_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_detail" "$CHARACTER_DETAIL_FILE"
 
     CHARACTER_PORTRAIT_CONTEXT_PREAMBLE="write a DALL-E prompt for a portrait of the following person that is no longer than 900 characters long. "
     CHARACTER_PORTRAIT_CONTEXT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_context_prompt.txt"
     create_prompt_file "$CHARACTER_PORTRAIT_CONTEXT_PREAMBLE" "$CHARACTER_PORTRAIT_CONTEXT_PROMPT_FILE" "$CHARACTER_DETAIL_FILE"
-
     CHARACTER_PORTRAIT_CONTEXT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_context.txt"
     generate_completion_from_prompt "$CHARACTER_PORTRAIT_CONTEXT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait_context" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
 
@@ -278,7 +350,6 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
     CHARACTER_PORTRAIT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_prompt.txt"
     create_prompt_file "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_PROMPT_FILE" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
     append_string_to_prompt_file "$CHARACTER_PORTRAIT_SUFFIX" "$CHARACTER_PORTRAIT_PROMPT_FILE"
-
     CHARACTER_PORTRAIT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait.jpg"
     generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait" "$CHARACTER_PORTRAIT_FILE"
 done
