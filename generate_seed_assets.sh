@@ -280,6 +280,93 @@ refine_context_with_preamble() {
     generate_completion_from_prompt "$_X_NEW_CONTEXT_PROMPT_FILE" "$2" "$3"
 }
 
+
+# $1 = character full name
+# $2 = attribute_list_file
+# $3 = portrait_file
+# $4 = character_detail_file
+# $5 = character_context_file
+# $6 = output_file_name
+write_character_sheet() {
+
+_X_DETAILS=$(cat $4 | sed -e 's/\([&%$#_{}^\-]\)/\\\1/g')
+_X_CONTEXT=$(cat $5 | sed -e 's/\([&%$#_{}^\-]\)/\\\1/g')
+
+_X_ATTRIBUTE_LIST=$(cat $2 | sed -e 's/\([&%$#_{}^\-]\)/\\\1/g')
+_X_AGE=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Age' | cut -f2 -d,)
+_X_SEX=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Sex' | cut -f2 -d,)
+_X_HAIR=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Hair Color' | cut -f2 -d,)
+_X_EYES=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Eye Color' | cut -f2 -d,)
+_X_BIRTHDATE=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Birthdate' | cut -f2 -d,)
+_X_ZODIAC=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Zodiac Sign' | cut -f2 -d,)
+_X_BLOOD=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Blood Type' | cut -f2 -d,)
+_X_BIRTHPLACE=$(echo -n "$_X_ATTRIBUTE_LIST" | grep 'Birth Place' | cut -f2- -d, | tr -d "\r\n")
+
+_X_DATA=$(cat <<END
+\documentclass{article}
+\usepackage[letterpaper, total={7.5in, 10in}]{geometry}
+\usepackage{multicol}
+\usepackage{sectionbreak}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\graphicspath{{$SCRATCH_DIR/}}
+\title{Character Dossier: $1}
+\begin{document}
+
+
+\begin{multicols}{2}
+
+\section*{Character Dossier: $1}
+
+\begin{center}
+\includegraphics[width=3in,height=3in,natwidth=1024,natheight=1024]{$3}
+
+
+\begin{tabularx}{3in}{|X X|} 
+ \hline
+ & \\\\
+ Age & $_X_AGE \\\\
+ Sex & $_X_SEX \\\\
+ Hair & $_X_HAIR \\\\
+ Eyes & $_X_EYES \\\\
+ Birthdate & $_X_BIRTHDATE \\\\
+ Zodiac Sign & $_X_ZODIAC \\\\
+ Blood Type & $_X_BLOOD \\\\
+ Birthplace & $_X_BIRTHPLACE \\\\
+ & \\\\
+ \hline
+\end{tabularx}
+
+\end{center}
+
+\sectionbreak
+
+\section*{Physical Description}
+$_X_DETAILS
+
+\section*{Character Overview}
+$_X_CONTEXT
+
+
+\end{multicols}
+\end{document}
+END
+)
+
+CHARACTER_TEX_FILE="$SCRATCH_DIR/$6.tex"
+echo "$_X_DATA" > "$CHARACTER_TEX_FILE"
+latex -output-directory="$SCRATCH_DIR" -output-format=dvi "$CHARACTER_TEX_FILE"
+if [ $? -ne 0 ]; then
+    fatal "Could not run latex on $CHARACTER_TEX_FILE"
+fi
+
+CHARACTER_DVI_FILE="$SCRATCH_DIR/$6.dvi"
+CHARACTER_PDF_FILE="$SCRATCH_DIR/$6.pdf"
+dvipdfm "$CHARACTER_DVI_FILE" -o "$CHARACTER_PDF_FILE"
+
+}
+
+
 if [ "X$1" == "X" ]; then
     fatal "Usage: $0 <story_id> <initial_prompt>"
 fi
@@ -360,4 +447,7 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
     append_string_to_prompt_file "$CHARACTER_PORTRAIT_SUFFIX" "$CHARACTER_PORTRAIT_PROMPT_FILE"
     CHARACTER_PORTRAIT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait.jpg"
     generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait" "$CHARACTER_PORTRAIT_FILE"
+
+    CHARACTER_DOSSIER_NAME="${CHARACTER_FILE_PREFIX}_dossier"
+    write_character_sheet "$CHARACTER_NAME" "$CHARACTER_ATTRIBUTES_CSV" "$CHARACTER_PORTRAIT_FILE" "$CHARACTER_DETAIL_FILE" "$CHARACTER_CONTEXT_FILE" "$CHARACTER_DOSSIER_NAME"
 done
