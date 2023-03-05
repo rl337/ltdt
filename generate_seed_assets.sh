@@ -1,203 +1,15 @@
 #!/bin/bash
 
-OPENAI_API_BASE_URL="https://api.openai.com"
-OPENAI_TEXT_MODEL=text-davinci-003
-
-mesg() {
-    _X_PREFIX=`date`
-
-    echo "$_X_PREFIX $*" 1>&2
-}
-
-info() {
-    mesg "INFO $*"
-}
-
-fatal() {
-    mesg "FATAL $*"
-    exit -1
-}
-
-
-if [ "X$OPENAI_API_KEY" == "X" ]; then
-    fatal "OPENAI_API_KEY environment variable must be set"
+SCRIPT_DIR=`dirname $0`
+BASH_DIR="$SCRIPT_DIR/bash"
+if [ ! -d "$BASH_DIR" ]; then
+    echo "Could not determine ltdt bash library directory" 1>&2
+    exit -2
 fi
 
-
-DEBUG_LOREM_IPSUM_COMPLETION="\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus tristique luctus tellus quis accumsan. Morbi blandit, nibh faucibus vehicula gravida, sem neque tempus libero, dapibus porta ante lorem semper tortor. Donec purus nisi, porttitor vel pharetra nec, pharetra sed purus. Etiam rutrum condimentum mi ut tristique."
-DEBUG_CHARACTER_LIST_COMPLETION="\n\nList of Characters in csv format:\n\ncharacter_Lorem_Ipsum.json,Lorem Ipsum,dolor sit amet\ncharacter_consectetur_elit.json,Consectetur Elit, Vivamus tristique luctus tellus "
-DEBUG_CHARACTER_ATTRIBUTES_COMPLETION="\n\nList of Character Attributes in csv format:\n\nname,Lorem Ipsum\nage,dolor\nsex,sit\nhair color,amet\nbirthdate,consectetur\nzodiac sign,elit\nblood type,vivamus\nbirth place,tristique "
-
-
-# $1 = specific api
-# $2 = data
-debug_openai() {
-
-    _X_CALL_DATE=`date '+%s'`
-
-    case "$1" in
-        
-        v1/completions)
-            _X_COMPLETION_DATA="$DEBUG_LOREM_IPSUM_COMPLETION"
-            echo "$2" | grep 'csv format' > /dev/null
-            if [ $? -eq 0 ]; then
-                _X_COMPLETION_DATA="$DEBUG_CHARACTER_LIST_COMPLETION"
-                echo "$2" | grep 'character attributes' > /dev/null
-                if [ $? -eq 0 ]; then
-                    _X_COMPLETION_DATA="$DEBUG_CHARACTER_ATTRIBUTES_COMPLETION"
-                fi 
-            fi
-_X_DATA=$(cat <<END
-{"id":"cmpl-6onzloyRUV3oIUZQag98WE4qp8cmc","object":"text_completion","created":$_X_CALL_DATE,"model":"$OPENAI_TEXT_MODEL","choices":[{"text":"$_X_COMPLETION_DATA","index":0,"logprobs":null,"finish_reason":null}],"usage":{"prompt_tokens":265,"completion_tokens":105,"total_tokens":370}}
-END
-)
-            ;;
-        v1/images/generations)
-_X_DATA=$(cat <<END
-{
-  "created": $_X_CALL_DATE,
-  "data": [
-    {
-      "b64_json": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
-    }
-  ]
-}
-END
-)
-            ;;
-        *)
-            fatal "Unknown api call $1"
-    esac
-    echo -n "$_X_DATA"
-}
-
-
-# $1 = specific api, example v1/completions
-# $2 = data
-openai() {
-    _X_FULL_API_URL="$OPENAI_API_BASE_URL/$1"
-
-    if [ "X$DEBUG" != "X" ]; then
-        debug_openai "$1" "$2" 
-        return $?
-    fi
-    
-    curl -s "$_X_FULL_API_URL" \
-        -H 'Content-Type: application/json' \
-        -H "Authorization: Bearer $OPENAI_API_KEY" \
-        -d "$2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not curl $_X_FULL_API_URL"
-    fi
-}
-
-
-
-# $1 = model to use
-# $2 = prompt_file
-# $3 = max_tokens
-completions() {
-
-_X_PROMPT=$(cat "$2")
-
-_X_DATA=$( jq -n \
-  --arg model "$1" \
-  --arg prompt "$_X_PROMPT" \
-  --arg max_tokens "$3" \
-  '{model: $model, prompt: $prompt, max_tokens: $max_tokens|fromjson}'
-)
-
-    openai "v1/completions" "$_X_DATA" 
-}
-
-
-# $1 prompt_file
-# $2 size 1024x1024, 512x512, 256x256
-images_generations() {
-
-_X_PROMPT=$(cat "$1")
-_X_DATA=$(cat <<END
-{
-   "prompt": "$_X_PROMPT",
-   "n": 1,
-   "size": "$2",
-   "response_format": "b64_json"
-}
-END
-)
-
-    openai "v1/images/generations" "$_X_DATA"
-}
-
-
-# $1 = response file
-extract_completions_response() {
-    cat "$1" | jq -e --raw-output '.choices[0].text'
-    if [ $? -ne 0 ]; then
-        fatal "Could not extract response from $1"
-    fi
-}
-
-
-# $1 file to append from
-# $2 destination file
-# $1 and $2 must not be the same file
-append_prompt_file() {
-    if [ ! -f "$1" ]; then
-        fatal "file to append from does not exist: $1"
-    fi
-
-    if [ ! -f "$2" ]; then
-        fatal "file to append to does not exist: $2"
-    fi
-
-    cat "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g" >> "$2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not append $1 to $2"
-    fi
-}
-
-# $1 string to append 
-# $2 destination file
-append_string_to_prompt_file() {
-    if [ ! -f "$2" ]; then
-        fatal "file to append to does not exist: $2"
-    fi
-
-    _X_ADDENDUM=`echo -n "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g"`
-    cat "$2" | grep "$_X_ADDENDUM" > /dev/null
-    if [ $? -eq 0 ]; then
-        info "String already appended to $2"
-        return 0
-    fi
-
-    echo -n "$_X_ADDENDUM"  >> "$2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not add to prompt file: $1"
-    fi
-}
-
-# $1 preamble
-# $2 destination file
-# $3 optional file to append to preamble
-create_prompt_file() {
-    if [ -f "$2" ]; then
-        info "prompt file already exists: $2"
-        return
-    fi
-
-    echo -n "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g"  > "$2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not create prompt file: $1"
-    fi
-
-    if [ "X$3" == "X" ]; then
-        return 0
-    fi
-
-    append_prompt_file "$3" "$2"
-}
-
+. "$BASH_DIR/logging.sh"
+. "$BASH_DIR/openai.sh"
+. "$BASH_DIR/prompt_management.sh"
 
 # $1 prompt file
 # $2 completion_name
@@ -249,16 +61,8 @@ generate_image_from_prompt() {
         info "response for $2 already exists: $_TMP_RESPONSE_FILE"
     fi
 
-    _TMP_BASE64_FILE="${SCRATCH_DIR}/${2}.base64"
-    jq -e --raw-output '.data[0].b64_json' "$_TMP_RESPONSE_FILE" > "$_TMP_BASE64_FILE"
-    if [ $? -ne 0 ]; then
-        fatal "Could not extract base64 data from $_TMP_RESPONSE_FILE"
-    fi
-
-    base64 -d "$_TMP_BASE64_FILE" > "$3"
-    if [ $? -ne 0 ]; then
-        fatal "Could not decode base64 data from $_TMP_BASE64_FILE"
-    fi
+        
+    extract_images_generations_response "$_TMP_RESPONSE_FILE" "$3"
 }
 
 # $1 original_context_file
@@ -275,7 +79,7 @@ refine_context_with_preamble() {
     fi
 
     _X_NEW_CONTEXT_PROMPT_FILE="$SCRATCH_DIR/${2}_prompt.txt"
-    create_prompt_file "$4" "$_X_NEW_CONTEXT_PROMPT_FILE" "$1"
+    prepend_preamble_to_prompt_file "$4" "$_X_NEW_CONTEXT_PROMPT_FILE" "$1"
 
     generate_completion_from_prompt "$_X_NEW_CONTEXT_PROMPT_FILE" "$2" "$3"
 }
@@ -389,7 +193,7 @@ fi
 USER_PROVIDED_PROMPT_FILE="$SCRATCH_DIR/original_prompt.txt"
 if [ ! -f "$USER_PROVIDED_PROMPT_FILE" ]; then
     # record and store the original user prompt
-    echo "$2" > "$USER_PROVIDED_PROMPT_FILE"
+    create_prompt_file_from_string "$2" "$USER_PROVIDED_PROMPT_FILE"
     info "Using initial prompt: $2"
 else
     info "User provided prompt file already exists: $USER_PROVIDED_PROMPT_FILE"
@@ -443,7 +247,7 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
     CHARACTER_PORTRAIT_PREAMBLE="take a photographic portrait with a 35mm lens of the following character"
     CHARACTER_PORTRAIT_SUFFIX="35mm, fujifilm, dramatic lighting, cinematic, 4k"
     CHARACTER_PORTRAIT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_prompt.txt"
-    create_prompt_file "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_PROMPT_FILE" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
+    prepend_preamble_to_prompt_file "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_PROMPT_FILE" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
     append_string_to_prompt_file "$CHARACTER_PORTRAIT_SUFFIX" "$CHARACTER_PORTRAIT_PROMPT_FILE"
     CHARACTER_PORTRAIT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait.jpg"
     generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait" "$CHARACTER_PORTRAIT_FILE"
