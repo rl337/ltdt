@@ -8,6 +8,7 @@ if [ ! -d "$BASH_DIR" ]; then
 fi
 
 . "$BASH_DIR/logging.sh"
+. "$BASH_DIR/asset_management.sh"
 
 OPENAI_API_BASE_URL="https://api.openai.com"
 OPENAI_TEXT_MODEL=text-davinci-003
@@ -91,8 +92,10 @@ openai() {
 # $2 = prompt_file
 # $3 = max_tokens
 completions() {
+    assert_valid_asset "$2"
 
-_X_PROMPT=$(cat "$2")
+    _X_PROMPT_FILE=$(asset_path "$2")
+    _X_PROMPT=$(cat "$_X_PROMPT_FILE")
 
 _X_DATA=$( jq -n \
   --arg model "$1" \
@@ -105,10 +108,11 @@ _X_DATA=$( jq -n \
 }
 
 
-# $1 prompt_file
+# $1 prompt asset_id
 # $2 size 1024x1024, 512x512, 256x256
 images_generations() {
 
+_X_PROMPT_FILE=$(asset_path "$1")
 _X_PROMPT=$(cat "$1")
 _X_DATA=$(cat <<END
 {
@@ -124,27 +128,96 @@ END
 }
 
 
-# $1 = response file
+# $1 = response asset_id
 extract_completions_response() {
-    cat "$1" | jq -e --raw-output '.choices[0].text'
+    assert_is_file "$1"
+
+    _X_RESPONSE_FILE=$(asset_path "$1")
+    cat "$_X_RESPONSE_FILE" | jq -e --raw-output '.choices[0].text'
     if [ $? -ne 0 ]; then
-        fatal "Could not extract completin from from $1"
+        fatal "Could not extract completion from from $1 ($_X_RESPONSE_FILE)"
     fi
 }
 
-# $1 = response file
-# $2 output file
+# $1 = response asset
+# $2 = output asset
 extract_images_generations_response() {
-    _TMP_BASE64_FILE="${2}.base64"
-    jq -e --raw-output '.data[0].b64_json' "$1" > "$_TMP_BASE64_FILE"
-    if [ $? -ne 0 ]; then
-        fatal "Could not extract image base64 data from $1"
+    assert_asset_file "$1"
+
+    if [ asset_file_exists "$2" ]; then
+        info "image asset already exists: $2 ($(asset_path $2))"
+        return 0
     fi
 
-    base64 -d "$_TMP_BASE64_FILE" > "$2"
+    _TMP_BASE64=$(suffix_asset "$2" base64)
+    _TMP_BASE64_FILE=$(asset_path "$_TMP_BASE64")
+    if [ ! asset_file_exists "$_TMP_BASE64" ]; then
+        jq -e --raw-output '.data[0].b64_json' "$1" > "$_TMP_BASE64_FILE"
+        if [ $? -ne 0 ]; then
+            fatal "Could not extract image base64 data from $1"
+        fi
+    fi
+
+    _TMP_OUTPUT_FILE=$(asset_path "$2")
+    base64 -d "$_TMP_BASE64_FILE" > "$_TMP_OUTPUT_FILE"
     if [ $? -ne 0 ]; then
         fatal "Could not decode base64 data from $_TMP_BASE64_FILE"
     fi
+}
+
+# $1 prompt asset_id
+# $2 output asset_id
+# $3 optional filter
+generate_completion_from_prompt() {
+    assert_is_prompt "$1"
+    assert_asset_file_exists "$1"
+
+    assert_valid_assett "$2"
+    if [ asset_file_exists "$2" ]; then
+        info "output asset already exists: $2 ($(asset_path $2))"
+        return 0
+    fi
+
+    _TMP_RESPONSE=$(suffix_asset "$2" "response")
+    _TMP_RESPONSE_PATH=$(asset_path "$_TMP_RESPONSE")
+    if [ asset_file_exists "$_TMP_RESPONSE" ]; then
+        info "response for $2 already exists: $_TMP_RESPONSE"
+    else
+        completions $OPENAI_TEXT_MODEL "$1" 2048 > "$_TMP_RESPONSE_PATH"
+    fi
+
+    _TMP_OUTPUT_PATH=$(asset_path "$2")
+    if [ "X$4" == "X" ]; then
+        extract_completions_response "$_TMP_RESPONSE" > "$_TMP_OUTPUT_PATH"
+    else
+        extract_completions_response "$_TMP_RESPONSE" | grep "$3" > "$_TMP_OUTPUT_PATH"
+    fi
+}
+
+
+# $1 prompt asset_id
+# $2 output image asset_id
+generate_image_from_prompt() {
+    assert_is_prompt "$1"
+    assert_asset_file_exists "$1"
+
+    assert_valid_asset "$2"
+    if [ asset_file_exists "$3" ]; then
+        info "image asset already exists: $2 ($(asset_path $2))"
+        return 0
+    fi
+
+    _TMP_PROMPT_FILE=$(asset_path "$1")
+    _TMP_RESPONSE=$(suffix_asset "$2" response)
+    _TMP_RESPONSE_PATH=$(asset_path "$_TMP_RESPONSE")
+    if [ asset_file_exists "$_TMP_RESPONSE" ]; then
+        info "response for $2 already exists: $_TMP_RESPONSE_PATH"
+    else
+        images_generations "$_TMP_PROMPT_FILE" 1024x1024 > "$_TMP_RESPONSE_PATH"
+    fi
+
+
+    extract_images_generations_response "$_TMP_RESPONSE" "$2"
 }
 
 fi
