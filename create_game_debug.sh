@@ -1,6 +1,6 @@
 STORY=debug_story
 
-rm -rf "./stories/$STORY"
+rm -rf "./data/story/$STORY"
 
 OPENAI_API_KEY=FAKE_OPENAI_KEY \
     DEBUG=true \

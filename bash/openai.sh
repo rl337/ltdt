@@ -128,6 +128,7 @@ END
 }
 
 
+
 # $1 = response asset_id
 extract_completions_response() {
     assert_file_exists "$1"
@@ -144,7 +145,8 @@ extract_completions_response() {
 extract_images_generations_response() {
     assert_file_exists "$1"
 
-    if [ asset_file_exists "$2" ]; then
+    asset_file_exists "$2"
+    if [ $? -eq 0 ]; then
         info "image asset already exists: $2 ($(asset_path $2))"
         return 0
     fi
@@ -204,7 +206,8 @@ generate_image_from_prompt() {
     assert_file_exists "$1"
 
     assert_valid_asset "$2"
-    if [ asset_file_exists "$3" ]; then
+    asset_file_exists "$3"
+    if [ $? == 0 ]; then
         info "image asset already exists: $2 ($(asset_path $2))"
         return 0
     fi
@@ -218,8 +221,21 @@ generate_image_from_prompt() {
         images_generations "$_TMP_PROMPT_FILE" 1024x1024 > "$_TMP_RESPONSE_PATH"
     fi
 
-
     extract_images_generations_response "$_TMP_RESPONSE" "$2"
+}
+
+
+# $1 = preamble string
+# $2 = context asset_id
+# $3 = completion asset_id
+# $4 = optional suffix string
+generate_completion_from_preamble_and_context() {
+    assert_valid_asset "$3"
+    assert_is_context "$2"
+
+    _X_COMPLETION_PROMPT=$(suffix_asset "$3" "prompt")
+    create_prompt_from_preamble_and_context "$_X_COMPLETION_PROMPT" "$1" "$2" "$4"
+    generate_completion_from_prompt "$_X_COMPLETION_PROMPT" "$3"
 }
 
 fi

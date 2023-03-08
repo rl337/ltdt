@@ -128,58 +128,51 @@ if [ "X$2" == "X" ]; then
     fatal "Usage: $0 <story_id> <original_prompt>"
 fi
 
-DATA_DIR=./stories
+DATA_DIR=./data
 ASSET_ROOT="$DATA_DIR"
 
 ROOT_ASSET=$(root_asset)
-STORY_ASSET=$(sub_asset "$ROOT_ASSET" "$STORY_ID")
+STORY_ROOT_ASSET=$(sub_asset "$ROOT_ASSET" "$STORY_ID")
+ensure_asset_directory "$STORY_ROOT_ASSET"
 
-ensure_asset_directory "$STORY_ASSET"
+STORY_ASSET=$(sub_asset "$STORY_ROOT_ASSET" "story")
 
-USER_PROVIDED_CONTEXT=$(sub_asset "$STORY_ASSET" "original_context")
+USER_PROVIDED_CONTEXT=$(suffix_asset "$STORY_ASSET" "original_context")
 create_context_from_string "$2" "$USER_PROVIDED_CONTEXT"
 
-STORY_PROMPT_PREAMBLE="Given the following prompt, if not already specified choose a setting from an arbitrary selection of top 25 countries by GDP other than the United States. If not already specified, choose an arbitrary time period for the story.  valid time periods are prehistoric, feudal, renaissance, post industrial, modern, or futuristic. Summarize a story using the Pixar method.  the story should take place in a few key concrete locations and involve both main characters and supporting roles. Half of the roles should be from a different country. If a role represents a group of people create a two or three representative individuals. Give each character a full name an age and description. Create a detailed description of this context including all locations, characters and a synopsis of how all of the story elements are related. "
-STORY_PROMPT=$(sub_asset "$STORY_ASSET" "story_prompt")
-create_prompt_from_preamble_and_context "$STORY_PROMPT" "$STORY_PROMPT_PREAMBLE" "$USER_PROVIDED_CONTEXT"
+STORY_CONTEXT_PREAMBLE="Given the following prompt, if not already specified choose a setting from an arbitrary selection of top 25 countries by GDP other than the United States. If not already specified, choose an arbitrary time period for the story.  valid time periods are prehistoric, feudal, renaissance, post industrial, modern, or futuristic. Summarize a story using the Pixar method.  the story should take place in a few key concrete locations and involve both main characters and supporting roles. Half of the roles should be from a different country. If a role represents a group of people create a two or three representative individuals. Give each character a full name an age and description. Create a detailed description of this context including all locations, characters and a synopsis of how all of the story elements are related. "
 
-STORY_CONTEXT=$(sub_asset "$STORY_ASSET" "story_context")
-generate_completion_from_prompt "$STORY_PROMPT" "$STORY_CONTEXT"
+
+STORY_CONTEXT=$(suffix_asset "$STORY_ASSET" "context")
+generate_completion_from_preamble_and_context "$STORY_CONTEXT_PREAMBLE" "$USER_PROVIDED_CONTEXT" "$STORY_CONTEXT"
 
 CHARACTER_LIST_PREAMBLE="Given the following context if there are roles representing a group of people, create two or three representative characters from that group. Be sure that each character has a full name, age, sex, hair color, eye color, birth date, a zodiac sign consistent with their birth date, blood type, birth place, and description. create a list of all characters in the story in csv format where the first column is a unix filename based on the name of the character with spaces converted into underscores and is prefixed with character and has a .json extension.  The second column is the full name of the character.  The third column is a brief description of the character's role in the story."
-CHARACTER_LIST_CSV=$(sub_asset "$STORY_ASSET" "character_list")
-CHARACTER_LIST_PROMPT=$(sub_asset "$STORY_ASSET" "character_list_prompt")
-create_prompt_from_preamble_and_context "$CHARACTER_LIST_PROMPT" "$CHARACTER_LIST_PREAMBLE" "$STORY_CONTEXT"
-generate_completion_from_prompt "$CHARACTER_LIST_PROMPT" "$CHARACTER_LIST_CSV" ".json"
+CHARACTER_LIST=$(sub_asset "$STORY_ASSET" "character_list")
+generate_completion_from_preamble_and_context "$CHARACTER_LIST_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_LIST"
 
-CHARACTERS_ASSET=$(sub_asset "$STORY_ASSET" characters)
+CHARACTERS_ASSET=$(sub_asset "$STORY_ROOT_ASSET" characters)
 
-CHARACTER_FILES=$(extract_column_from_list "$CHARACTER_LIST_CSV" 1 '.json')
+CHARACTER_FILES=$(extract_column_from_list "$CHARACTER_LIST" 1 '.json')
 for CHARACTER_FILE in $CHARACTER_FILES; do
     CHARACTER_FILE_PREFIX=$(basename "$CHARACTER_FILE" .json | tr 'A-Z' 'a-z')
     CHARACTER_ASSET=$(sub_asset "$CHARACTERS_ASSET" "$CHARACTER_FILE_PREFIX")
 
-    CHARACTER_ROW=$(extract_rows_from_list "$CHARACTER_LIST_CSV" "$CHARACTER_FILE")
+    CHARACTER_ROW=$(extract_rows_from_list "$CHARACTER_LIST" "$CHARACTER_FILE")
     if [ $? -ne 0 ]; then
-        fatal "Could not find $CHARACTER_FILE in $CHARACTER_LIST_CSV"
+        fatal "Could not find $CHARACTER_FILE in $CHARACTER_LIST"
     fi
     CHARACTER_NAME=`echo -n "$CHARACTER_ROW" | cut -f 2 -d,`
 
     info "Creating character: $CHARACTER_NAME"
 
     CHARACTER_CONTEXT=$(suffix_asset "$CHARACTER_ASSET" "context")
-    CHARACTER_CONTEXT_PROMPT=$(suffix_asset "$CHARACTER_ASSET" "prompt")
     CHARACTER_CONTEXT_PREAMBLE="given the following context describe the character $CHARACTER_NAME, their motivations their life before the story and their role in the story details should also include age, sex, hair color, eye color, birth date, a zodiac sign consistent with their birth date, blood type and birth place. If their place of birth is not in the setting of the story, describe why they left their birth place"
-    CHARACTER_CONTEXT_FILE="$SCRATCH_DIR/${CHARACTER_CONTEXT_NAME}.txt"
-    create_prompt_from_preamble_and_context "$CHARACTER_CONTEXT_PROMPT" "$CHARACTER_CONTEXT_PREAMBLE" "$STORY_CONTEXT"
-    generate_completion_from_prompt "$CHARACTER_CONTEXT_PROMPT" "$CHARACTER_CONTEXT"
+    generate_completion_from_preamble_and_context "$CHARACTER_CONTEXT_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_CONTEXT"
 
     CHARACTER_ATTRIBUTES=$(suffix_asset "$CHARACTER_ASSET" "attributes")
     CHARACTER_ATTRIBUTES_LIST=$(suffix_asset "$CHARACTER_ATTRIBUTES" "list")
-    CHARACTER_ATTRIBUTES_PROMPT=$(suffix_asset "$CHARACTER_ATTRIBUTES" "prompt")
     CHARACTER_ATTRIBUTES_PREAMBLE="given the following character information create a list of character attributes in csv format list where the first column is the name of an attribute and the second column is the value based on the character description. The rows are name, age, sex, hair color, eye color, birthdate, zodiac sign, blood type, and birth place."
-    create_prompt_from_preamble_and_context "$CHARACTER_ATTRIBUTES_PROMPT" "$CHARACTER_ATTRIBUTES_PREAMBLE" "$CHARACTER_CONTEXT"
-    generate_completion_from_prompt "$CHARACTER_ATTRIBUTES_PROMPT" "$CHARACTER_ATTRIBUTES_LIST" 
+    generate_completion_from_preamble_and_context "$CHARACTER_ATTRIBUTES_PREAMBLE" "$CHARACTER_CONTEXT" "$CHARACTER_ATTRIBUTES_LIST"
 
     CHARACTER_DETAIL=$(suffix_asset "$CHARACTER_ASSET" "detail")
 
