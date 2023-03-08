@@ -92,33 +92,35 @@ asset_path() {
 }
 
 # $1 = asset_id to check if exists as file
-asset_file_exists() {
+file_exists() {
     assert_valid_asset "$1"
     
-    [ ! -f $(asset_path "$1") ]
+    [ -f $(asset_path "$1") ]
 }
 
 # $1 = asset_id to check if exists as directory
-asset_directory_exists() {
+directory_exists() {
     assert_valid_asset "$1"
     
-    [ ! -d $(asset_path "$1") ]
+    [ -d $(asset_path "$1") ]
 }
 
 # $1 = asset_id asserting is a file
-assert_asset_file_exists() {
+assert_file_exists() {
     assert_valid_asset "$1"
 
-    if [ ! asset_file_exists "$1" ]; then
+    file_exists "$1"
+    if [ $? -ne 0 ]; then
         fatal "Expected asset to exist as a file $1 ($(asset_path $1))"
     fi
 }
 
 # $1 = asset_id asserting is a directory
-assert_asset_directory_exists() {
+assert_directory_exists() {
     assert_valid_asset "$1"
 
-    if [ ! asset_directory_exists "$1" ]; then
+    directory_exists "$1"
+    if [ $? -ne 0 ]; then
         fatal "Expected asset to exist as a directory $1 ($(asset_path $1))"
     fi
 }
@@ -176,7 +178,7 @@ assert_is_list() {
 # $2 = optional regex match
 extract_rows_from_list() {
     assert_is_list "$1"
-    asset_file_exists "$1"
+    assert_file_exists "$1"
 
     _X_CSV_FILE=$(asset_path "$1")
     if [ "X$2" == "X" ]; then
@@ -191,7 +193,7 @@ extract_rows_from_list() {
 # $3 = optional regex filter
 extract_column_from_list() {
     assert_is_list "$1"
-    asset_file_exists "$1"
+    assert_file_exists "$1"
 
     assert_valid_integer "$2"
 

@@ -181,23 +181,27 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
     create_prompt_from_preamble_and_context "$CHARACTER_ATTRIBUTES_PROMPT" "$CHARACTER_ATTRIBUTES_PREAMBLE" "$CHARACTER_CONTEXT"
     generate_completion_from_prompt "$CHARACTER_ATTRIBUTES_PROMPT" "$CHARACTER_ATTRIBUTES_LIST" 
 
-    #CHARACTER_DETAIL_NAME="${CHARACTER_FILE_PREFIX}_detail"
-    #CHARACTER_DETAIL_PREAMBLE="given the following context describe the character $CHARACTER_NAME create a detailed physical description of the character including physical features that make them stand out as well as any possessions they will always have on themselves.  The description should also include clothing preferences. "
-    #CHARACTER_DETAIL_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_detail.txt"
-    #refine_context_with_preamble "$CHARACTER_CONTEXT_FILE" "$CHARACTER_DETAIL_NAME" "$CHARACTER_DETAIL_FILE" "$CHARACTER_DETAIL_PREAMBLE"
+    CHARACTER_DETAIL=$(suffix_asset "$CHARACTER_ASSET" "detail")
 
-    #CHARACTER_PORTRAIT_CONTEXT_NAME="${CHARACTER_FILE_PREFIX}_portrait_context"
-    #CHARACTER_PORTRAIT_CONTEXT_PREAMBLE="write a DALL-E prompt for a portrait of the following person that is no longer than 900 characters long. "
-    #CHARACTER_PORTRAIT_CONTEXT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_context.txt"
-    #refine_context_with_preamble "$CHARACTER_DETAIL_FILE" "$CHARACTER_PORTRAIT_CONTEXT_NAME" "$CHARACTER_PORTRAIT_CONTEXT_FILE" "$CHARACTER_PORTRAIT_CONTEXT_PREAMBLE"
+    CHARACTER_DETAIL_CONTEXT=$(suffix_asset "$CHARACTER_DETAIL" "context")
+    CHARACTER_DETAIL_PREAMBLE="given the following context describe the character $CHARACTER_NAME create a detailed physical description of the character including physical features that make them stand out as well as any possessions they will always have on themselves.  The description should also include clothing preferences. "
+    CHARACTER_DETAIL_PROMPT=$(suffix_asset "$CHARACTER_DETAIL" "prompt")
+    create_prompt_from_preamble_and_context "$CHARACTER_DETAIL_PROMPT" "$CHARACTER_DETAIL_PREAMBLE" "$CHARACTER_CONTEXT"
+    generate_completion_from_prompt "$CHARACTER_DETAIL_PROMPT" "$CHARACTER_DETAIL_CONTEXT" 
 
-    #CHARACTER_PORTRAIT_PREAMBLE="take a photographic portrait with a 35mm lens of the following character"
-    #CHARACTER_PORTRAIT_SUFFIX="35mm, fujifilm, dramatic lighting, cinematic, 4k"
-    #CHARACTER_PORTRAIT_PROMPT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait_prompt.txt"
-    #prepend_preamble_to_prompt_file "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_PROMPT_FILE" "$CHARACTER_PORTRAIT_CONTEXT_FILE"
-    #append_string_to_prompt_file "$CHARACTER_PORTRAIT_SUFFIX" "$CHARACTER_PORTRAIT_PROMPT_FILE"
-    #CHARACTER_PORTRAIT_FILE="$SCRATCH_DIR/${CHARACTER_FILE_PREFIX}_portrait.jpg"
-    #generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT_FILE" "${CHARACTER_FILE_PREFIX}_portrait" "$CHARACTER_PORTRAIT_FILE"
+    CHARACTER_PORTRAIT=$(suffix_asset "$CHARACTER_ASSET" "portrait")
+
+    CHARACTER_PORTRAIT_CONTEXT=$(suffix_asset "$CHARACTER_PORTRAIT" "context")
+    CHARACTER_PORTRAIT_CONTEXT_PREAMBLE="write a DALL-E prompt for a portrait of the following person that is no longer than 900 characters long. "
+    CHARACTER_PORTRAIT_CONTEXT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT" "prompt")
+    create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT_PREAMBLE" "$CHARACTER_DETAIL_CONTEXT"
+    generate_completion_from_prompt "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT"
+
+    CHARACTER_PORTRAIT_PREAMBLE="take a photographic portrait with a 35mm lens of the following character"
+    CHARACTER_PORTRAIT_SUFFIX="35mm, fujifilm, dramatic lighting, cinematic, 4k"
+    CHARACTER_PORTRAIT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT" "prompt")
+    create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_CONTEXT" "$CHARACTER_PORTAIT_SUFFIX"
+    generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT"
 
     #CHARACTER_DOSSIER_NAME="${CHARACTER_FILE_PREFIX}_dossier"
     #write_character_sheet "$CHARACTER_NAME" "$CHARACTER_ATTRIBUTES_LIST" "$CHARACTER_PORTRAIT_FILE" "$CHARACTER_DETAIL_FILE" "$CHARACTER_CONTEXT_FILE" "$CHARACTER_DOSSIER_NAME"

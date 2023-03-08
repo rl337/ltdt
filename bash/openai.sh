@@ -130,7 +130,7 @@ END
 
 # $1 = response asset_id
 extract_completions_response() {
-    assert_is_file "$1"
+    assert_file_exists "$1"
 
     _X_RESPONSE_FILE=$(asset_path "$1")
     cat "$_X_RESPONSE_FILE" | jq -e --raw-output '.choices[0].text'
@@ -142,17 +142,19 @@ extract_completions_response() {
 # $1 = response asset
 # $2 = output asset
 extract_images_generations_response() {
-    assert_asset_file "$1"
+    assert_file_exists "$1"
 
     if [ asset_file_exists "$2" ]; then
         info "image asset already exists: $2 ($(asset_path $2))"
         return 0
     fi
+    _TMP_RESPONSE_FILE=$(asset_path "$1")
 
     _TMP_BASE64=$(suffix_asset "$2" base64)
     _TMP_BASE64_FILE=$(asset_path "$_TMP_BASE64")
-    if [ ! asset_file_exists "$_TMP_BASE64" ]; then
-        jq -e --raw-output '.data[0].b64_json' "$1" > "$_TMP_BASE64_FILE"
+    asset_file_exists "$_TMP_BASE64"
+    if [ $? -ne 0 ]; then
+        jq -e --raw-output '.data[0].b64_json' "$_TMP_RESPONSE_FILE" > "$_TMP_BASE64_FILE"
         if [ $? -ne 0 ]; then
             fatal "Could not extract image base64 data from $1"
         fi
@@ -170,7 +172,7 @@ extract_images_generations_response() {
 # $3 optional filter
 generate_completion_from_prompt() {
     assert_is_prompt "$1"
-    assert_asset_file_exists "$1"
+    assert_file_exists "$1"
 
     assert_valid_assett "$2"
     if [ asset_file_exists "$2" ]; then
@@ -199,7 +201,7 @@ generate_completion_from_prompt() {
 # $2 output image asset_id
 generate_image_from_prompt() {
     assert_is_prompt "$1"
-    assert_asset_file_exists "$1"
+    assert_file_exists "$1"
 
     assert_valid_asset "$2"
     if [ asset_file_exists "$3" ]; then
