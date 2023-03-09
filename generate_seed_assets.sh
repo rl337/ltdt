@@ -13,26 +13,6 @@ fi
 
 
 
-# $1 original_context_file
-# $2 new_context_name
-# $3 new_context_file
-# $4 preamble
-refine_context_with_preamble() {
-    if [ ! -f "$1" ]; then
-        fatal "context file for $2 does not exist: $1"
-    fi
-
-    if [ -f "$3" ]; then
-        info "context file for $2 already exists: $1"
-    fi
-
-    _X_NEW_CONTEXT_PROMPT_FILE="$SCRATCH_DIR/${2}_prompt.txt"
-    prepend_preamble_to_prompt_file "$4" "$_X_NEW_CONTEXT_PROMPT_FILE" "$1"
-
-    generate_completion_from_prompt "$_X_NEW_CONTEXT_PROMPT_FILE" "$2" "$3"
-}
-
-
 # $1 = character full name
 # $2 = attribute_list_file
 # $3 = portrait_file
@@ -146,7 +126,7 @@ STORY_CONTEXT_PREAMBLE="Given the following prompt, if not already specified cho
 STORY_CONTEXT=$(suffix_asset "$STORY_ASSET" "context")
 generate_completion_from_preamble_and_context "$STORY_CONTEXT_PREAMBLE" "$USER_PROVIDED_CONTEXT" "$STORY_CONTEXT"
 
-CHARACTER_LIST_PREAMBLE="Given the following context if there are roles representing a group of people, create two or three representative characters from that group. Be sure that each character has a full name, age, sex, hair color, eye color, birth date, a zodiac sign consistent with their birth date, blood type, birth place, and description. create a list of all characters in the story in csv format where the first column is a unix filename based on the name of the character with spaces converted into underscores and is prefixed with character and has a .json extension.  The second column is the full name of the character.  The third column is a brief description of the character's role in the story."
+CHARACTER_LIST_PREAMBLE="Given the following context if there are roles representing a group of people, create two or three representative characters from that group. create a list of all characters in the story in csv format where the first column is a unix filename based on the full name of the character with spaces converted into underscores and is prefixed with character and has a .json extension.  The second column is the full name of the character.  The third column is a brief description of the character's role in the story."
 CHARACTER_LIST=$(sub_asset "$STORY_ASSET" "character_list")
 generate_completion_from_preamble_and_context "$CHARACTER_LIST_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_LIST"
 
@@ -186,14 +166,14 @@ for CHARACTER_FILE in $CHARACTER_FILES; do
 
     CHARACTER_PORTRAIT_CONTEXT=$(suffix_asset "$CHARACTER_PORTRAIT" "context")
     CHARACTER_PORTRAIT_CONTEXT_PREAMBLE="write a DALL-E prompt for a portrait of the following person that is no longer than 900 characters long. "
-    CHARACTER_PORTRAIT_CONTEXT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT" "prompt")
+    CHARACTER_PORTRAIT_CONTEXT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT_CONTEXT" "prompt")
     create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT_PREAMBLE" "$CHARACTER_DETAIL_CONTEXT"
     generate_completion_from_prompt "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT"
 
-    CHARACTER_PORTRAIT_PREAMBLE="take a photographic portrait with a 35mm lens of the following character"
-    CHARACTER_PORTRAIT_SUFFIX="35mm, fujifilm, dramatic lighting, cinematic, 4k"
+    CHARACTER_PORTRAIT_PREAMBLE="take a 35mm photographic portrait of the following character"
+    CHARACTER_PORTRAIT_SUFFIX="nikon, prime lens, portrait photograph, 35mm, fujifilm, dramatic lighting, cinematic, 4k"
     CHARACTER_PORTRAIT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT" "prompt")
-    create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_CONTEXT" "$CHARACTER_PORTAIT_SUFFIX"
+    create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_CONTEXT" "$CHARACTER_PORTRAIT_SUFFIX"
     generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT"
 
     #CHARACTER_DOSSIER_NAME="${CHARACTER_FILE_PREFIX}_dossier"

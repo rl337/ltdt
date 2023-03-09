@@ -145,7 +145,7 @@ extract_completions_response() {
 extract_images_generations_response() {
     assert_file_exists "$1"
 
-    asset_file_exists "$2"
+    file_exists "$2"
     if [ $? -eq 0 ]; then
         info "image asset already exists: $2 ($(asset_path $2))"
         return 0
@@ -154,7 +154,7 @@ extract_images_generations_response() {
 
     _TMP_BASE64=$(suffix_asset "$2" base64)
     _TMP_BASE64_FILE=$(asset_path "$_TMP_BASE64")
-    asset_file_exists "$_TMP_BASE64"
+    file_exists "$_TMP_BASE64"
     if [ $? -ne 0 ]; then
         jq -e --raw-output '.data[0].b64_json' "$_TMP_RESPONSE_FILE" > "$_TMP_BASE64_FILE"
         if [ $? -ne 0 ]; then
@@ -176,15 +176,17 @@ generate_completion_from_prompt() {
     assert_is_prompt "$1"
     assert_file_exists "$1"
 
-    assert_valid_assett "$2"
-    if [ asset_file_exists "$2" ]; then
+    assert_valid_asset "$2"
+    file_exists "$2"
+    if [ $? -eq 0 ]; then
         info "output asset already exists: $2 ($(asset_path $2))"
         return 0
     fi
 
     _TMP_RESPONSE=$(suffix_asset "$2" "response")
     _TMP_RESPONSE_PATH=$(asset_path "$_TMP_RESPONSE")
-    if [ asset_file_exists "$_TMP_RESPONSE" ]; then
+    file_exists "$_TMP_RESPONSE"
+    if [ $? -eq 0 ]; then
         info "response for $2 already exists: $_TMP_RESPONSE"
     else
         completions $OPENAI_TEXT_MODEL "$1" 2048 > "$_TMP_RESPONSE_PATH"
@@ -206,7 +208,7 @@ generate_image_from_prompt() {
     assert_file_exists "$1"
 
     assert_valid_asset "$2"
-    asset_file_exists "$3"
+    file_exists "$3"
     if [ $? == 0 ]; then
         info "image asset already exists: $2 ($(asset_path $2))"
         return 0
@@ -215,7 +217,8 @@ generate_image_from_prompt() {
     _TMP_PROMPT_FILE=$(asset_path "$1")
     _TMP_RESPONSE=$(suffix_asset "$2" response)
     _TMP_RESPONSE_PATH=$(asset_path "$_TMP_RESPONSE")
-    if [ asset_file_exists "$_TMP_RESPONSE" ]; then
+    file_exists "$_TMP_RESPONSE"
+    if [ $? -eq 0 ]; then
         info "response for $2 already exists: $_TMP_RESPONSE_PATH"
     else
         images_generations "$_TMP_PROMPT_FILE" 1024x1024 > "$_TMP_RESPONSE_PATH"

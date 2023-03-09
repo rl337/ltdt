@@ -17,6 +17,11 @@ assert_valid_asset() {
         fatal "$1 is not a valid asset_id.  Must be a '/' separated list of [a-z0-9_]+"
     fi
 
+    echo "$1" | grep -e '^[^a-z]' > /dev/null
+    if [ $? -eq 0 ]; then
+        fatal "$1 is not a valid asset_id.  Must be a start with a [a-z]"
+    fi
+
     echo "$1" | grep '^/' > /dev/null
     if [ $? -eq 0 ]; then
         fatal "$1 is not a valid asset_id.  Must not begin with a '/'"
