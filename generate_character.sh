@@ -118,11 +118,12 @@ if [ "X$3" == "X" ]; then
 fi
 STORY_CONTEXT="$3"
 
-DATA_DIR=./data
-ASSET_ROOT="$DATA_DIR"
+if [ "X$ASSET_ROOT" == "X" ]; then
+    fatal "ASSET_ROOT must be set"
+fi
 
 ROOT_ASSET=$(root_asset)
-
+assert_directory_exists "$ROOT_ASSET"
 
 info "Creating character: $CHARACTER_NAME"
 
