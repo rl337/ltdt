@@ -12,9 +12,8 @@ fi
 . "$BASH_DIR/blockade.sh"
 
 usage() {
-    fatal "Usage: $0 <prompt_string> <negative_prompt_string> <output_file>"
+    fatal "Usage: $0 <prompt_string> <output_asset>"
 }
-
 
 if [ "X$1" == "X" ]; then
     usage
@@ -24,37 +23,18 @@ if [ "X$2" == "X" ]; then
     usage
 fi
 
-if [ "X$3" == "X" ]; then
-    usage
+if [ "X$ASSET_ROOT" == "X" ]; then
+    fatal "You must set an ASSET_ROOT"
 fi
 
-stable_skybox "$1" "$2" > /tmp/response.json
-REQUEST_ID=$(cat /tmp/response.json | jq -e -r .request.id)
-if [ $? -ne 0 ]; then
-    fatal "Could not get response id"
-fi
 
-CURRENT_PROGRESS=$(request_status "$REQUEST_ID" | jq .request.progress)
-while [ $CURRENT_PROGRESS -lt 100 ]; do
-    sleep 30
-    CURRENT_PROGRESS=$(request_status "$REQUEST_ID" | jq .request.progress)
-done
+ROOT_ASSET=$(root_asset)
+SCRATCH_ASSET=$(sub_asset "$ROOT_ASSET" "scratch")
 
-request_status "$REQUEST_ID" > /tmp/response_final.json
-CURRENT_STATUS=$(cat /tmp/response_final.json | jq -r .request.status)
-if [ $? -ne 0 ]; then
-    fatal "Could not extract status from last response"
-fi
-if [ "X$CURRENT_STATUS" != "Xcomplete" ]; then
-    fatal "Unexpected status for request $REQUEST_ID: $CURRENT_STATUS"
-fi
+assert_valid_asset "$2"
+OUTPUT_ASSET=$(sub_asset "$SCRATCH_ASSET" "$2")
+OUTPUT_IMAGE_ASSET=$(suffix_asset "$OUTPUT_ASSET" "skybox")
+OUTPUT_ASSET_PROMPT=$(suffix_asset "$OUTPUT_IMAGE_ASSET" "prompt")
+create_prompt_from_string "$1" "$OUTPUT_ASSET_PROMPT"
 
-FILE_URL=$(cat /tmp/response_final.json | jq -r .request.file_url)
-if [ $? -ne 0 ]; then
-    fatal "Could not extract file_url from last response"
-fi
-if [ "X$FILE_URL" == "X" ]; then
-    fatal "Got an empty file url from last response"
-fi
-
-curl "$FILE_URL" > "$3"
+generate_skybox_from_prompt "$OUTPUT_ASSET_PROMPT" "$OUTPUT_IMAGE_ASSET"

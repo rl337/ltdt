@@ -90,6 +90,8 @@ asset_path() {
         *_context) echo -n "$ASSET_ROOT/$1.context" ;;
         *_response) echo -n "$ASSET_ROOT/$1.json" ;;
         *_portrait) echo -n "$ASSET_ROOT/$1.jpg" ;;
+        *_image) echo -n "$ASSET_ROOT/$1.jpg" ;;
+        *_skybox) echo -n "$ASSET_ROOT/$1.jpg" ;;
         *_list) echo -n "$ASSET_ROOT/$1.csv" ;;
         *_base64) echo -n "$ASSET_ROOT/$1.base64" ;;
         *) echo -n "$ASSET_ROOT/$1"

@@ -113,7 +113,7 @@ _X_DATA=$( jq -n \
 images_generations() {
 
 _X_PROMPT_FILE=$(asset_path "$1")
-_X_PROMPT=$(cat "$1")
+_X_PROMPT=$(cat "$_X_PROMPT_FILE")
 _X_DATA=$(cat <<END
 {
    "prompt": "$_X_PROMPT",
@@ -208,7 +208,7 @@ generate_image_from_prompt() {
     assert_file_exists "$1"
 
     assert_valid_asset "$2"
-    file_exists "$3"
+    file_exists "$2"
     if [ $? == 0 ]; then
         info "image asset already exists: $2 ($(asset_path $2))"
         return 0
