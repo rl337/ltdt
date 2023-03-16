@@ -26,6 +26,11 @@ assert_valid_asset() {
     if [ $? -eq 0 ]; then
         fatal "$1 is not a valid asset_id.  Must not begin with a '/'"
     fi
+
+    echo "$1" | grep '[a-z0-9_]$' > /dev/null
+    if [ $? -ne 0 ]; then
+        fatal "$1 is not a valid asset_id.  Must end with a [a-z0-9_]"
+    fi
 }
 
 # $1 = value to check for integerness

@@ -20,5 +20,20 @@ test_assert_equal() {
     fi
 }
 
+test_assert_zero() {
+    assert_zero 0
+    X=$(assert_zero 1)
+    if [ $? == 0 ]; then
+        fatal "should have failed"
+    fi
+}
+test_assert_not_zero() {
+    assert_not_zero 1
+    X=$(assert_not_zero 0)
+    if [ $? == 0 ]; then
+        fatal "should have failed"
+    fi
+}
+
 
 run_all_tests
