@@ -12,12 +12,13 @@ fi
 . "$BASH_DIR/testing.sh"
 
 
-test_assert_valid_asset() {
-    assert_valid_asset "omg"
-    assert_valid_asset "omg/haha/lol"
-    assert_valid_asset "asset/has_suffix"
+test_assert_equal() {
+    assert_equal "omg" "omg"
+    X=$(assert_equal "not" "equal")
+    if [ $? == 0 ]; then
+        fatal "should have failed"
+    fi
 }
-
 
 
 run_all_tests

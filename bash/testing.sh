@@ -28,4 +28,14 @@ run_all_tests() {
     info "test file: $0 passed $_X_PASSED/$_X_RAN ($_X_FAILED failures)"
 }
 
+# $1 = param 1
+# $2 = param 2
+# $3 = message
+# fatal unles $1 == $2
+assert_equal() {
+    if [ "X$1" != "X$2" ]; then
+        fatal "assert $1 == $2: $3"
+    fi
+}
+
 fi
