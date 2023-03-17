@@ -1,7 +1,6 @@
 if [ "X$_X_ASSET_MANAGEMENT_LIB_" == "X" ]; then
 _X_ASSET_MANAGEMENT_LIB_=true
 
-_X_ROOT_ASSET="story"
 if [ ! -d "$BASH_DIR" ]; then
     echo "Could not determine ltdt bash library directory" 1>&2
     exit -2
@@ -9,6 +8,13 @@ fi
 
 . "$BASH_DIR/logging.sh"
 
+if [ "X$ROOT_ASSET" == "X" ]; then
+    ROOT_ASSET="story"
+fi
+
+root_asset() {
+    echo -n "$ROOT_ASSET"
+}
 
 # $1 = asset_id
 assert_valid_asset() {
@@ -51,11 +57,6 @@ assert_valid_asset_root() {
     fi
 }
 
-
-root_asset() {
-    echo -n "$_X_ROOT_ASSET"
-}
-
 # $1 = parent asset_id
 # $2 = sub asset_name
 # basically echos $1/$2
@@ -78,7 +79,7 @@ suffix_asset() {
 parent_asset() {
     assert_valid_asset "$1"
 
-    if [ "X$1" == "X$_X_ROOT_ASSET" ]; then
+    if [ "X$1" == "X$ROOT_ASSET" ]; then
         fatal "Root asset $1 has no parent"
     fi
 

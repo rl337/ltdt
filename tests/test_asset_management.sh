@@ -48,4 +48,65 @@ test_assert_valid_integer() {
     assert_not_zero $? "number 1.23 is not an integer"
 }
 
+test_assert_valid_asset_root() {
+    ASSET_ROOT=/tmp
+    assert_valid_asset_root
+
+    ASSET_ROOT=.
+    assert_valid_asset_root
+
+    ASSET_ROOT=""
+    $(assert_valid_asset_root)
+    assert_not_zero $? "empty asset root is not valid"
+
+    ASSET_ROOT="/a/b/c/d/e/f/g"
+    $(assert_valid_asset_root)
+    assert_not_zero $? "invalid path is not a valid asset root"
+}
+
+test_root_asset() {
+    ACTUAL=$(root_asset)
+    assert_equal "story" "$ACTUAL"
+
+    ROOT_ASSET="omg"
+    ACTUAL=$(root_asset)
+    assert_equal "omg" "$ACTUAL"
+}
+
+test_sub_asset() {
+    ROOT_ASSET="omg"
+    assert_equal "omg/suffix" $(sub_asset $(root_asset) "suffix")
+}
+
+test_suffix_asset() {
+    ROOT_ASSET="omg"
+    assert_equal "omg_suffix" $(suffix_asset $(root_asset) "suffix")
+}
+
+test_parent_asset() {
+    ROOT_ASSET="omg"
+    CHILD_ASSET=$(sub_asset $(root_asset) "child")
+    GRANDCHILD_ASSET=$(sub_asset "$CHILD_ASSET" "grandchild")
+    assert_equal "omg/child/grandchild" "$GRANDCHILD_ASSET"
+    assert_equal "omg/child" $(parent_asset "$GRANDCHILD_ASSET")
+    assert_equal "omg" $(parent_asset $(parent_asset "$GRANDCHILD_ASSET"))
+
+    $(parent_asset $(parent_asset $(parent_asset "$GRANDCHILD_ASSET")))
+    assert_not_zero $? "should not be able to get parent of root asset"
+}
+
+test_asset_path() {
+    ASSET_ROOT=/tmp
+    
+    assert_equal "/tmp/abc" $(asset_path "abc")
+    assert_equal "/tmp/abc_prompt.prompt" $(asset_path "abc_prompt")
+    assert_equal "/tmp/abc_context.context" $(asset_path "abc_context")
+    assert_equal "/tmp/abc_response.json" $(asset_path "abc_response")
+    assert_equal "/tmp/abc_portrait.jpg" $(asset_path "abc_portrait")
+    assert_equal "/tmp/abc_image.jpg" $(asset_path "abc_image")
+    assert_equal "/tmp/abc_skybox.jpg" $(asset_path "abc_skybox")
+    assert_equal "/tmp/abc_list.csv" $(asset_path "abc_list")
+    assert_equal "/tmp/abc_base64.base64" $(asset_path "abc_base64")
+}
+
 run_all_tests
