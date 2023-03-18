@@ -12,7 +12,7 @@ jobs:
     run-name: tests on ${{ github.ref_name || 'unknown' }} by @${{ github.actor }}
     steps:
       - uses: actions/checkout@v3
-          with:
-            lfs: true
+        with:
+          lfs: true
       - name: run test script
         run: bash run_tests.sh
