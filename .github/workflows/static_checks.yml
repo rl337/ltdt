@@ -14,4 +14,4 @@ jobs:
         with:
           lfs: true
       - name: run test script
-        run: bash ./run_tests.sh
+        run: bash ./ltdt/run_tests.sh
