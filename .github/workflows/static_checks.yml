@@ -8,8 +8,7 @@ on:
 jobs:
   run_tests:
     runs-on: ubuntu-latest
-    name: run_all_tests
-    run-name: tests on ${{ github.ref_name || 'unknown' }} by @${{ github.actor }}
+    name: Run All Tests
     steps:
       - uses: actions/checkout@v3
         with:
