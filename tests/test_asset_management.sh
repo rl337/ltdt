@@ -109,4 +109,68 @@ test_asset_path() {
     assert_equal "/tmp/abc_base64.base64" $(asset_path "abc_base64")
 }
 
+test_file_exists() {
+    ASSET_ROOT=/tmp
+    ROOT_ASSET="test_$$"
+
+    ROOT_ASSET_PATH=$(asset_path $ROOT_ASSET)
+    file_exists $ROOT_ASSET
+    assert_not_zero $? "$ROOT_ASSET_PATH shouldn't exist initially"
+
+    touch "$ROOT_ASSET_PATH"
+    file_exists "$ROOT_ASSET"
+    assert_zero $? "$ROOT_ASSET_PATH should now exist"
+
+    rm "$ROOT_ASSET_PATH"
+    assert_zero $? "$ROOT_ASSET_PATH should be deletable"
+}
+
+test_directory_exists() {
+    ASSET_ROOT=/tmp
+    ROOT_ASSET="test_$$"
+
+    ROOT_ASSET_PATH=$(asset_path $ROOT_ASSET)
+    directory_exists $ROOT_ASSET
+    assert_not_zero $? "$ROOT_ASSET_PATH shouldn't exist initially"
+
+    mkdir "$ROOT_ASSET_PATH"
+    directory_exists "$ROOT_ASSET"
+    assert_zero $? "$ROOT_ASSET_PATH should now exist"
+
+    rmdir "$ROOT_ASSET_PATH"
+    assert_zero $? "$ROOT_ASSET_PATH should be deletable"
+}
+
+test_assert_file_exists() {
+    ASSET_ROOT=/tmp
+    ROOT_ASSET="test_$$"
+
+    ROOT_ASSET_PATH=$(asset_path $ROOT_ASSET)
+    $(assert_file_exists $ROOT_ASSET)
+    assert_not_zero $? "$ROOT_ASSET_PATH shouldn't exist initially"
+
+    touch "$ROOT_ASSET_PATH"
+    assert_file_exists "$ROOT_ASSET"
+    assert_zero $? "$ROOT_ASSET_PATH should now exist"
+
+    rm "$ROOT_ASSET_PATH"
+    assert_zero $? "$ROOT_ASSET_PATH should be deletable"
+}
+
+test_assert_directory_exists() {
+    ASSET_ROOT=/tmp
+    ROOT_ASSET="test_$$"
+
+    ROOT_ASSET_PATH=$(asset_path $ROOT_ASSET)
+    $(directory_exists $ROOT_ASSET)
+    assert_not_zero $? "$ROOT_ASSET_PATH shouldn't exist initially"
+
+    mkdir "$ROOT_ASSET_PATH"
+    assert_directory_exists "$ROOT_ASSET"
+    assert_zero $? "$ROOT_ASSET_PATH should now exist"
+
+    rmdir "$ROOT_ASSET_PATH"
+    assert_zero $? "$ROOT_ASSET_PATH should be deletable"
+}
+
 run_all_tests
