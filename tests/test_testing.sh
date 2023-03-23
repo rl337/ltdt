@@ -12,6 +12,22 @@ fi
 . "$BASH_DIR/testing.sh"
 
 
+setup_environment() {
+    TEST_SET_ENVIRONMENT="omg this works"
+
+    export TEST_SET_ENVIRONMENT
+}
+
+test_setup() {
+    if [ "X$TEST_SET_ENVIRONMENT" == "X" ]; then
+        fatal "setup should have set TEST_SET_ENVIRONMENT"
+    fi
+
+    if [ "X$TEST_SET_ENVIRONMENT" != "Xomg this works" ]; then
+        fatal "setup should have set TEST_SET_ENVIRONMENT to 'omg this works'"
+    fi
+}
+
 test_assert_equal() {
     assert_equal "omg" "omg"
     X=$(assert_equal "not" "equal")

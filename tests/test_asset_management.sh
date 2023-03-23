@@ -12,6 +12,14 @@ fi
 . "$BASH_DIR/testing.sh"
 
 
+setup_set_asset_root() {
+    ASSET_ROOT="$TEST_DIR"
+    ROOT_ASSET="$TEST_NAME"
+
+    export ASSET_ROOT ROOT_ASSET
+    info "Asset root: $ASSET_ROOT, Root asset: $ROOT_ASSET"
+}
+
 test_assert_valid_asset() {
     assert_valid_asset "omg"
     assert_valid_asset "omg/haha/lol"
@@ -66,7 +74,7 @@ test_assert_valid_asset_root() {
 
 test_root_asset() {
     ACTUAL=$(root_asset)
-    assert_equal "story" "$ACTUAL"
+    assert_equal "$TEST_NAME" "$ACTUAL"
 
     ROOT_ASSET="omg"
     ACTUAL=$(root_asset)
@@ -171,6 +179,32 @@ test_assert_directory_exists() {
 
     rmdir "$ROOT_ASSET_PATH"
     assert_zero $? "$ROOT_ASSET_PATH should be deletable"
+}
+
+test_assert_data_types() {
+
+    # context type
+    assert_is_context "abc_context"
+    $(assert_is_context "abc_notcontext")
+    assert_not_zero $? "abc_notcontext should not be a context"
+
+    # prompt type
+    assert_is_prompt "abc_prompt"
+    $(assert_is_prompt "abc_notprompt")
+    assert_not_zero $? "abc_notprompt should not be a prompt"
+
+    # list type
+    assert_is_list "abc_list"
+    $(assert_is_list) "abc_notlist"
+    assert_not_zero $? "abc_notlist should not be a list"
+}
+
+test_create_asset_from_string() {
+
+    TEST_ASSET=$(sub_asset $(root_asset) "test_asset")
+    EXPECTED="this is a test"
+    create_asset_from_string "$EXPECTED" "$TEST_ASSET"
+
 }
 
 run_all_tests

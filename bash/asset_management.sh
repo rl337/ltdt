@@ -267,39 +267,52 @@ filter_prompt_string() {
     echo -n "$1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g" 
 }
 
+# $1 string
+# $2 destination asset_id
+create_asset_from_string() {
+    assert_valid_asset "$2"
+
+    directory_exists "$2"
+    assert_not_zero $? "$2 already exists as a directory asset"
+
+    file_exists "$2"
+    assert_not_zero $? "$2 already exists, cannot create"
+
+    ensure_parent_asset_directory "$2"
+    _X_ASSET_FILE=$(asset_path "$2")
+    echo "$1" > "$_X_ASSET_FILE"
+    if [ $? -ne 0 ]; then
+        fatal "Could not create asset: $2 ($_X_ASSET_FILE)"
+    fi
+}
+
 
 # $1 context_string
 # $2 destination asset_id
 create_context_from_string() {
     assert_is_context "$2"
-    _X_CONTEXT_FILE=$(asset_path "$2")
-    if [ -f "$_X_CONTEXT_FILE" ]; then
-        info "context exists: $2 ($_X_CONTEXT_FILE)"
+
+    file_exists "$2"
+    if [ $? -eq 0 ]; then
+        info "context exists: $2 ($(asset_path $2))"
         return
     fi
 
-    ensure_parent_asset_directory "$2"
-    echo "$1" > "$_X_CONTEXT_FILE"
-    if [ $? -ne 0 ]; then
-        fatal "Could not create context: $2 ($_X_CONTEXT_FILE)"
-    fi
+    create_asset_from_string "$1" "$2"
 }
 
 # $1 prompt_string
 # $2 destination asset_id
 create_prompt_from_string() {
     assert_is_prompt "$2"
-    _X_PROMPT_FILE=$(asset_path "$2")
-    if [ -f "$_X_PROMPT_FILE" ]; then
+
+    file_exists "$2"
+    if [ $? -eq 0 ]; then
         info "prompt exists: $2"
         return
     fi
 
-    ensure_parent_asset_directory "$2"
-    filter_prompt_string "$1" > "$_X_PROMPT_FILE"
-    if [ $? -ne 0 ]; then
-        fatal "Could not create prompt file: $_X_PROMPT_FILE"
-    fi
+    create_asset_from_string $(filter_prompt_string "$1") "$2"
 }
 
 # $1 prompt asset_id

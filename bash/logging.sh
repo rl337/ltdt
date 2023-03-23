@@ -4,7 +4,10 @@ if [ "X$_X_LOGGING_LIB_" == "X" ]; then
 _X_LOGGING_LIB_=true
 
 mesg() {
-    _X_PREFIX=`date`
+    if [ "X$LOG_NAME" == "X" ]; then
+        LOG_NAME=default
+    fi
+    _X_PREFIX="$LOG_NAME $(date)"
 
     echo "$_X_PREFIX $*" 1>&2
 }
@@ -16,7 +19,7 @@ debug() {
 }
 
 info() {
-    mesg "INFO $*"
+    mesg "INFO  $*"
 }
 
 fatal() {
