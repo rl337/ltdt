@@ -200,11 +200,30 @@ test_assert_data_types() {
 }
 
 test_create_asset_from_string() {
-
     TEST_ASSET=$(sub_asset $(root_asset) "test_asset")
-    EXPECTED="this is a test"
-    create_asset_from_string "$EXPECTED" "$TEST_ASSET"
+    EXPECTED="this is a test asset"
 
+    assert_asset_missing "$TEST_ASSET"
+    create_asset_from_string "$EXPECTED" "$TEST_ASSET"
+    assert_file_exists "$TEST_ASSET"
+
+    ACTUAL=$(cat $(asset_path $TEST_ASSET))
+    assert_equal "$EXPECTED" "$ACTUAL"
+}
+
+test_create_context_from_string() {
+    BAD_ASSET=$(sub_asset $(root_asset) "bad_asset")
+    EXPECTED="this is a test context"
+
+    $(create_context_from_string "$EXPECTED" "$BAD_ASSET")
+    assert_not_zero $? "$BAD_ASSET should have failed as context"
+
+    TEST_CONTEXT=$(sub_asset $(root_asset) "test_context")
+    create_context_from_string "$EXPECTED" "$TEST_CONTEXT"
+    assert_file_exists "$TEST_CONTEXT"
+
+    ACTUAL=$(cat $(asset_path $TEST_CONTEXT))
+    assert_equal "$EXPECTED" "$ACTUAL"
 }
 
 run_all_tests

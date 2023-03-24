@@ -111,11 +111,28 @@ file_exists() {
     [ -f $(asset_path "$1") ]
 }
 
+# $1 = asset_id to check if asset does not exist as a file or directory
+asset_missing() {
+    assert_valid_asset "$1"
+    
+    [ ! -e $(asset_path "$1") ]
+}
+
 # $1 = asset_id to check if exists as directory
 directory_exists() {
     assert_valid_asset "$1"
     
     [ -d $(asset_path "$1") ]
+}
+
+# $1 = asset_id asserting is a file
+assert_asset_missing() {
+    assert_valid_asset "$1"
+
+    asset_missing "$1"
+    if [ $? -ne 0 ]; then
+        fatal "Expected asset to NOT exist $1 ($(asset_path $1))"
+    fi
 }
 
 # $1 = asset_id asserting is a file
