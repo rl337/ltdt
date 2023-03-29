@@ -143,4 +143,11 @@ assert_not_zero() {
     fi
 }
 
+# $1 = haystack
+# $2 = needle
+# $3 = message
+assert_string_match() {
+    echo "$1" | grep -- "$2" > /dev/null
+    assert_zero $? "Could not find $2 in $1"
+}
 fi
