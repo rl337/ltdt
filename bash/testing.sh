@@ -1,6 +1,14 @@
 if [ "X$_X_TESTING_LIB_" == "X" ]; then
 _X_TESTING_LIB_=true
 
+if [ ! -d "$BASH_DIR" ]; then
+    echo "Could not determine ltdt bash library directory" 1>&2
+    exit -2
+fi
+
+. "$BASH_DIR/logging.sh"
+. "$BASH_DIR/asserts.sh"
+
 
 list_all_tests() {
     declare -f | grep '()' | cut -f 1 -d\  | grep -e '^test_'
@@ -103,51 +111,4 @@ run_all_tests() {
     return $_X_FAILED
 }
 
-# $1 = param 1
-# $2 = param 2
-# $3 = message
-# fatal unless $1 == $2
-assert_equal() {
-    if [ "X$1" != "X$2" ]; then
-        if [ "X$3" == "X" ]; then
-            fatal "assert $1 == $2: FAIL"
-        else
-            fatal "assert $1 == $2: $3"
-        fi
-    fi
-}
-
-# $1 = param 1
-# $2 = message
-# fatal unless $1 == 0
-assert_zero() {
-    if [ $1 -ne 0 ]; then
-        if [ "X$2" == "X" ]; then
-            fatal "assert $1 == 0: FAIL"
-        else 
-            fatal "assert $1 == 0: $2"
-        fi
-    fi
-}
-
-# $1 = param 1
-# $2 = message
-# fatal unless $1 != 0
-assert_not_zero() {
-    if [ $1 -eq 0 ]; then
-        if [ "X$2" == "X" ]; then
-            fatal "assert $1 != 0: FAIL"
-        else 
-            fatal "assert $1 != 0: $2"
-        fi
-    fi
-}
-
-# $1 = haystack
-# $2 = needle
-# $3 = message
-assert_string_match() {
-    echo "$1" | grep -- "$2" > /dev/null
-    assert_zero $? "Could not find $2 in $1"
-}
 fi

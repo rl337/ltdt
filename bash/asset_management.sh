@@ -7,6 +7,7 @@ if [ ! -d "$BASH_DIR" ]; then
 fi
 
 . "$BASH_DIR/logging.sh"
+. "$BASH_DIR/asserts.sh"
 
 if [ "X$ROOT_ASSET" == "X" ]; then
     ROOT_ASSET="story"
@@ -19,32 +20,16 @@ root_asset() {
 # $1 = asset_id
 assert_valid_asset() {
     echo "$1" | grep -e '[^a-z0-9_/]' > /dev/null
-    if [ $? -eq 0 ]; then
-        fatal "$1 is not a valid asset_id.  Must be a '/' separated list of [a-z0-9_]+"
-    fi
+    assert_not_zero $? "$1 is not a valid asset_id.  Must be a '/' separated list of [a-z0-9_]+"
 
     echo "$1" | grep -e '^[^a-z]' > /dev/null
-    if [ $? -eq 0 ]; then
-        fatal "$1 is not a valid asset_id.  Must be a start with a [a-z]"
-    fi
+    assert_not_zero $? "$1 is not a valid asset_id.  Must be a start with a [a-z]"
 
     echo "$1" | grep '^/' > /dev/null
-    if [ $? -eq 0 ]; then
-        fatal "$1 is not a valid asset_id.  Must not begin with a '/'"
-    fi
+    assert_not_zero $? "$1 is not a valid asset_id.  Must not begin with a '/'"
 
     echo "$1" | grep '[a-z0-9_]$' > /dev/null
-    if [ $? -ne 0 ]; then
-        fatal "$1 is not a valid asset_id.  Must end with a [a-z0-9_]"
-    fi
-}
-
-# $1 = value to check for integerness
-assert_valid_integer() {
-    echo "$1" | grep -e '[^0-9]' > /dev/null
-    if [ $? -eq 0 ]; then
-        fatal "$1 is not an integer"
-    fi
+    assert_zero $? "$1 is not a valid asset_id.  Must end with a [a-z0-9_]"
 }
 
 assert_valid_asset_root() {
@@ -130,9 +115,7 @@ assert_asset_missing() {
     assert_valid_asset "$1"
 
     asset_missing "$1"
-    if [ $? -ne 0 ]; then
-        fatal "Expected asset to NOT exist $1 ($(asset_path $1))"
-    fi
+    assert_zero $? "Expected asset to NOT exist $1 ($(asset_path $1))"
 }
 
 # $1 = asset_id asserting is a file
@@ -140,9 +123,7 @@ assert_file_exists() {
     assert_valid_asset "$1"
 
     file_exists "$1"
-    if [ $? -ne 0 ]; then
-        fatal "Expected asset to exist as a file $1 ($(asset_path $1))"
-    fi
+    assert_zero $? "Expected asset to exist as a file $1 ($(asset_path $1))"
 }
 
 # $1 = asset_id asserting is a directory
@@ -150,9 +131,7 @@ assert_directory_exists() {
     assert_valid_asset "$1"
 
     directory_exists "$1"
-    if [ $? -ne 0 ]; then
-        fatal "Expected asset to exist as a directory $1 ($(asset_path $1))"
-    fi
+    assert_zero $? "Expected asset to exist as a directory $1 ($(asset_path $1))"
 }
 
 # $1 = asset_id of directory that needs to exist
@@ -162,9 +141,7 @@ ensure_asset_directory() {
 
     _X_ASSET_PATH=$(asset_path "$1")
     mkdir -p "$_X_ASSET_PATH"
-    if [ $? -ne 0 ]; then
-        fatal "Could not create directory for $_X_ASSET_PATH"
-    fi
+    assert_zero $? "Could not create directory for $_X_ASSET_PATH"
 }
 
 # $1 = asset_id whose parent needs to exist
@@ -180,27 +157,21 @@ ensure_parent_asset_directory() {
 assert_is_context() {
     assert_valid_asset "$1"
     echo -n "$1" | grep '_context$' > /dev/null
-    if [ $? -ne 0 ]; then
-        fatal "$1 is not a context asset"
-    fi
+    assert_zero $?  "$1 is not a context asset"
 }
 
 # $1 asset_id to test
 assert_is_prompt() {
     assert_valid_asset "$1"
     echo -n "$1" | grep '_prompt$' > /dev/null
-    if [ $? -ne 0 ]; then
-        fatal "$1 is not a prompt asset"
-    fi
+    assert_zero $? "$1 is not a prompt asset"
 }
 
 # $1 asset_id to test
 assert_is_list() {
     assert_valid_asset "$1"
     echo -n "$1" | grep '_list$' > /dev/null
-    if [ $? -ne 0 ]; then
-        fatal "$1 is not a list asset"
-    fi
+    assert_zero $? "$1 is not a list asset"
 }
 
 
@@ -254,9 +225,7 @@ catonate_contexts() {
     fi
 
     cat "$_X_PATH_1" | tr '\r\n\t' '   ' | sed -e 's/[ ][ ]*/ /g' | sed -e "s/\([0-9][0-9]*\)'[ ]*\([0-9][0-9]*\)\"/\1 ft \2 in/g" >> "$_X_PATH_2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not append $_X_PATH_1 to $_X_PATH_2"
-    fi
+    assert_zero $? "Could not append $_X_PATH_1 to $_X_PATH_2"
 }
 
 # $1 string to append 
@@ -274,9 +243,7 @@ append_string_to_prompt_file() {
     fi
 
     echo -n "$_X_ADDENDUM"  >> "$2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not add to prompt file: $1"
-    fi
+    assert_zero $? "Could not add to prompt file: $1"
 }
 
 # $1 string to filter
@@ -298,9 +265,7 @@ create_asset_from_string() {
     ensure_parent_asset_directory "$2"
     _X_ASSET_FILE=$(asset_path "$2")
     echo "$1" > "$_X_ASSET_FILE"
-    if [ $? -ne 0 ]; then
-        fatal "Could not create asset: $2 ($_X_ASSET_FILE)"
-    fi
+    assert_zero $? "Could not create asset: $2 ($_X_ASSET_FILE)"
 }
 
 
