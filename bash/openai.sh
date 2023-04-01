@@ -9,59 +9,10 @@ fi
 
 . "$BASH_DIR/logging.sh"
 . "$BASH_DIR/asset_management.sh"
+. "$BASH_DIR/http.sh"
 
 OPENAI_API_BASE_URL="https://api.openai.com"
 OPENAI_TEXT_MODEL=text-davinci-003
-
-
-
-DEBUG_LOREM_IPSUM_COMPLETION="\n\nLorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus tristique luctus tellus quis accumsan. Morbi blandit, nibh faucibus vehicula gravida, sem neque tempus libero, dapibus porta ante lorem semper tortor. Donec purus nisi, porttitor vel pharetra nec, pharetra sed purus. Etiam rutrum condimentum mi ut tristique."
-DEBUG_CHARACTER_LIST_COMPLETION="\n\nList of Characters in csv format:\n\ncharacter_Lorem_Ipsum.json,Lorem Ipsum,dolor sit amet\ncharacter_consectetur_elit.json,Consectetur Elit, Vivamus tristique luctus tellus "
-DEBUG_CHARACTER_ATTRIBUTES_COMPLETION="\n\nList of Character Attributes in csv format:\n\nname,Lorem Ipsum\nage,dolor\nsex,sit\nhair color,amet\nbirthdate,consectetur\nzodiac sign,elit\nblood type,vivamus\nbirth place,tristique "
-
-
-# $1 = specific api
-# $2 = data
-debug_openai() {
-
-    _X_CALL_DATE=`date '+%s'`
-
-    case "$1" in
-        
-        v1/completions)
-            _X_COMPLETION_DATA="$DEBUG_LOREM_IPSUM_COMPLETION"
-            echo "$2" | grep 'csv format' > /dev/null
-            if [ $? -eq 0 ]; then
-                _X_COMPLETION_DATA="$DEBUG_CHARACTER_LIST_COMPLETION"
-                echo "$2" | grep 'character attributes' > /dev/null
-                if [ $? -eq 0 ]; then
-                    _X_COMPLETION_DATA="$DEBUG_CHARACTER_ATTRIBUTES_COMPLETION"
-                fi 
-            fi
-_X_DATA=$(cat <<END
-{"id":"cmpl-6onzloyRUV3oIUZQag98WE4qp8cmc","object":"text_completion","created":$_X_CALL_DATE,"model":"$OPENAI_TEXT_MODEL","choices":[{"text":"$_X_COMPLETION_DATA","index":0,"logprobs":null,"finish_reason":null}],"usage":{"prompt_tokens":265,"completion_tokens":105,"total_tokens":370}}
-END
-)
-            ;;
-        v1/images/generations)
-_X_DATA=$(cat <<END
-{
-  "created": $_X_CALL_DATE,
-  "data": [
-    {
-      "b64_json": "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA="
-    }
-  ]
-}
-END
-)
-            ;;
-        *)
-            fatal "Unknown api call $1"
-    esac
-    echo -n "$_X_DATA"
-}
-
 
 # $1 = specific api, example v1/completions
 # $2 = data
@@ -72,18 +23,11 @@ openai() {
         fatal "OPENAI_API_KEY environment variable must be set"
     fi
 
-    if [ "X$DEBUG" != "X" ]; then
-        debug_openai "$1" "$2" 
-        return $?
-    fi
-    
-    curl -s "$_X_FULL_API_URL" \
-        -H 'Content-Type: application/json' \
-        -H "Authorization: Bearer $OPENAI_API_KEY" \
-        -d "$2"
-    if [ $? -ne 0 ]; then
-        fatal "Could not curl $_X_FULL_API_URL"
-    fi
+    http_post \
+        "$_X_FULL_API_URL" \
+        "$2" \
+        "$(jq -n --arg api_key "Bearer $OPENAI_API_KEY" '{"Content-Type": "application/json", "Authorization": $api_key}')"
+    assert_zero $? "Could not post API request to $_X_FULL_API_URL"
 }
 
 
