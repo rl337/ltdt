@@ -30,12 +30,10 @@ openai() {
     assert_zero $? "Could not post API request to $_X_FULL_API_URL"
 }
 
-
-
 # $1 = model to use
 # $2 = prompt_file
 # $3 = max_tokens
-completions() {
+openai_completions() {
     assert_valid_asset "$2"
 
     _X_PROMPT_FILE=$(asset_path "$2")
@@ -54,7 +52,7 @@ _X_DATA=$( jq -n \
 
 # $1 prompt asset_id
 # $2 size 1024x1024, 512x512, 256x256
-images_generations() {
+openai_images_generations() {
 
 _X_PROMPT_FILE=$(asset_path "$1")
 _X_PROMPT=$(cat "$_X_PROMPT_FILE")
@@ -74,7 +72,7 @@ END
 
 
 # $1 = response asset_id
-extract_completions_response() {
+openai_extract_completions_response() {
     assert_file_exists "$1"
 
     _X_RESPONSE_FILE=$(asset_path "$1")
@@ -86,7 +84,7 @@ extract_completions_response() {
 
 # $1 = response asset
 # $2 = output asset
-extract_images_generations_response() {
+openai_extract_images_generations_response() {
     assert_file_exists "$1"
 
     file_exists "$2"
@@ -116,7 +114,7 @@ extract_images_generations_response() {
 # $1 prompt asset_id
 # $2 output asset_id
 # $3 optional filter
-generate_completion_from_prompt() {
+openai_generate_completion_from_prompt() {
     assert_is_prompt "$1"
     assert_file_exists "$1"
 
@@ -133,21 +131,21 @@ generate_completion_from_prompt() {
     if [ $? -eq 0 ]; then
         info "response for $2 already exists: $_TMP_RESPONSE"
     else
-        completions $OPENAI_TEXT_MODEL "$1" 2048 > "$_TMP_RESPONSE_PATH"
+        openai_completions $OPENAI_TEXT_MODEL "$1" 2048 > "$_TMP_RESPONSE_PATH"
     fi
 
     _TMP_OUTPUT_PATH=$(asset_path "$2")
     if [ "X$4" == "X" ]; then
-        extract_completions_response "$_TMP_RESPONSE" > "$_TMP_OUTPUT_PATH"
+        openai_extract_completions_response "$_TMP_RESPONSE" > "$_TMP_OUTPUT_PATH"
     else
-        extract_completions_response "$_TMP_RESPONSE" | grep "$3" > "$_TMP_OUTPUT_PATH"
+        openai_extract_completions_response "$_TMP_RESPONSE" | grep "$3" > "$_TMP_OUTPUT_PATH"
     fi
 }
 
 
 # $1 prompt asset_id
 # $2 output image asset_id
-generate_image_from_prompt() {
+openai_generate_image_from_prompt() {
     assert_is_prompt "$1"
     assert_file_exists "$1"
 
@@ -165,10 +163,10 @@ generate_image_from_prompt() {
     if [ $? -eq 0 ]; then
         info "response for $2 already exists: $_TMP_RESPONSE_PATH"
     else
-        images_generations "$_TMP_PROMPT_FILE" 1024x1024 > "$_TMP_RESPONSE_PATH"
+        openai_images_generations "$_TMP_PROMPT_FILE" 1024x1024 > "$_TMP_RESPONSE_PATH"
     fi
 
-    extract_images_generations_response "$_TMP_RESPONSE" "$2"
+    openai_extract_images_generations_response "$_TMP_RESPONSE" "$2"
 }
 
 
@@ -176,13 +174,13 @@ generate_image_from_prompt() {
 # $2 = context asset_id
 # $3 = completion asset_id
 # $4 = optional suffix string
-generate_completion_from_preamble_and_context() {
+openai_generate_completion_from_preamble_and_context() {
     assert_valid_asset "$3"
     assert_is_context "$2"
 
     _X_COMPLETION_PROMPT=$(suffix_asset "$3" "prompt")
     create_prompt_from_preamble_and_context "$_X_COMPLETION_PROMPT" "$1" "$2" "$4"
-    generate_completion_from_prompt "$_X_COMPLETION_PROMPT" "$3"
+    openai_generate_completion_from_prompt "$_X_COMPLETION_PROMPT" "$3"
 }
 
 fi

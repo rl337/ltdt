@@ -294,7 +294,7 @@ create_prompt_from_string() {
         return
     fi
 
-    create_asset_from_string $(filter_prompt_string "$1") "$2"
+    create_asset_from_string "$(filter_prompt_string "$1")" "$2"
 }
 
 # $1 prompt asset_id
