@@ -30,7 +30,7 @@ assert_http_testing() {
 http_expect_get() {
     assert_http_testing
  
-    _X_EXPECTED_KEY="$( jq -n \
+    _X_EXPECTED_KEY="$( jq -n -S -c \
         --arg url "$1" \
         --arg params "$2" \
         --arg headers "$3" \
@@ -38,7 +38,7 @@ http_expect_get() {
     )"
     _X_EXPECTED_SHA=$(echo "$_X_EXPECTED_KEY" | shasum)
 
-    _X_EXPECTED_DATA="$( jq -n \
+    _X_EXPECTED_DATA="$( jq -n -S -c \
         --arg url "$1" \
         --arg params "$2" \
         --arg headers "$3" \
@@ -47,7 +47,7 @@ http_expect_get() {
     )"
 
     _X_EXPECT_HTTP_GET="$( echo "$_X_EXPECT_HTTP_GET" | \
-        jq \
+        jq -S -c \
             --arg sha "$_X_EXPECTED_SHA" \
             --arg data "$_X_EXPECTED_DATA" \
             '. += { ($sha): $data }' \
@@ -61,7 +61,7 @@ http_expect_get() {
 http_expect_post() {
     assert_http_testing
 
-    _X_EXPECTED_KEY="$( jq -n \
+    _X_EXPECTED_KEY="$( jq -n -S -c \
         --arg url "$1" \
         --arg data "$2" \
         --arg headers "$3" \
@@ -69,7 +69,7 @@ http_expect_post() {
     )"
     _X_EXPECTED_SHA=$(echo "$_X_EXPECTED_KEY" | shasum)
 
-    _X_EXPECTED_DATA="$( jq -n \
+    _X_EXPECTED_DATA="$( jq -n -S -c \
         --arg url "$1" \
         --arg data "$2" \
         --arg headers "$3" \
@@ -78,7 +78,7 @@ http_expect_post() {
     )"
 
     _X_EXPECT_HTTP_POST="$( echo "$_X_EXPECT_HTTP_POST" | \
-        jq \
+        jq -S -c \
             --arg sha "$_X_EXPECTED_SHA" \
             --arg data "$_X_EXPECTED_DATA" \
             '. += { ($sha): $data }' \
@@ -92,7 +92,7 @@ http_expect_post() {
 http_test_get() {
     assert_http_testing
 
-    _X_EXPECTED_KEY="$( jq -n \
+    _X_EXPECTED_KEY="$( jq -n -S -c \
         --arg url "$1" \
         --arg params "$2" \
         --arg headers "$3" \
@@ -100,7 +100,7 @@ http_test_get() {
     )"
     _X_EXPECTED_SHA=$(echo "$_X_EXPECTED_KEY" | shasum)
 
-    _X_CALL_INFO=$(echo "$_X_EXPECT_HTTP_GET" | jq --raw-output --arg key "$_X_EXPECTED_SHA" '.[$key]')
+    _X_CALL_INFO=$(echo "$_X_EXPECT_HTTP_GET" | jq --raw-output -S -c --arg key "$_X_EXPECTED_SHA" '.[$key]')
     assert_zero $? "Could not find expectation for http get call to $1 params: $2 headers: $3"
 
     if [ "X$_X_CALL_INFO" == "X" ]; then
@@ -130,7 +130,7 @@ http_test_get() {
 http_test_post() {
     assert_http_testing
 
-    _X_EXPECTED_KEY="$( jq -n \
+    _X_EXPECTED_KEY="$( jq -n -S -c \
         --arg url "$1" \
         --arg data "$2" \
         --arg headers "$3" \

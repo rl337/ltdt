@@ -26,7 +26,7 @@ openai() {
     http_post \
         "$_X_FULL_API_URL" \
         "$2" \
-        "$(jq -n --arg api_key "Bearer $OPENAI_API_KEY" '{"Content-Type": "application/json", "Authorization": $api_key}')"
+        "$(jq -n -S -c --arg api_key "Bearer $OPENAI_API_KEY" '{"Content-Type": "application/json", "Authorization": $api_key}')"
     assert_zero $? "Could not post API request to $_X_FULL_API_URL"
 }
 
@@ -39,7 +39,7 @@ openai_completions() {
     _X_PROMPT_FILE=$(asset_path "$2")
     _X_PROMPT=$(cat "$_X_PROMPT_FILE")
 
-_X_DATA=$( jq -n \
+_X_DATA=$( jq -n -S -c \
   --arg model "$1" \
   --arg prompt "$_X_PROMPT" \
   --arg max_tokens "$3" \
@@ -56,14 +56,10 @@ openai_images_generations() {
 
 _X_PROMPT_FILE=$(asset_path "$1")
 _X_PROMPT=$(cat "$_X_PROMPT_FILE")
-_X_DATA=$(cat <<END
-{
-   "prompt": "$_X_PROMPT",
-   "n": 1,
-   "size": "$2",
-   "response_format": "b64_json"
-}
-END
+_X_DATA=$( jq -n -S -c \
+  --arg prompt "$_X_PROMPT" \
+  --arg size "$2" \
+  '{"prompt": $prompt, "n": 1, "size": $size, "response_format": "b64_json"}'
 )
 
     openai "v1/images/generations" "$_X_DATA"
@@ -156,14 +152,13 @@ openai_generate_image_from_prompt() {
         return 0
     fi
 
-    _TMP_PROMPT_FILE=$(asset_path "$1")
     _TMP_RESPONSE=$(suffix_asset "$2" response)
     _TMP_RESPONSE_PATH=$(asset_path "$_TMP_RESPONSE")
     file_exists "$_TMP_RESPONSE"
     if [ $? -eq 0 ]; then
         info "response for $2 already exists: $_TMP_RESPONSE_PATH"
     else
-        openai_images_generations "$_TMP_PROMPT_FILE" 1024x1024 > "$_TMP_RESPONSE_PATH"
+        openai_images_generations "$1" 1024x1024 > "$_TMP_RESPONSE_PATH"
     fi
 
     openai_extract_images_generations_response "$_TMP_RESPONSE" "$2"
