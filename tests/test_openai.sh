@@ -132,7 +132,7 @@ test_openai_generate_image_from_prompt() {
     openai_generate_image_from_prompt "$TEST_PROMPT_ASSET" "$TEST_IMAGE_ASSET"
 
     TEST_IMAGE_PATH=$(asset_path "$TEST_IMAGE_ASSET")
-    ACTUAL_IMAGE_BASE64=$(cat "$TEST_IMAGE_PATH" | base64)
+    ACTUAL_IMAGE_BASE64=$(cat "$TEST_IMAGE_PATH" | base64 -b 0)
     assert_equal "$EXPECTED_IMAGE_BASE64" "$ACTUAL_IMAGE_BASE64"
 }
 
