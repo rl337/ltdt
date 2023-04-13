@@ -12,6 +12,7 @@ fi
 . "$BASH_DIR/openai.sh"
 
 GENERATE_CHARACTER_SH="$SCRIPT_DIR/generate_character.sh"
+# GENERATE_STORY_SH="$SCRIPT_DIR/generate_story.sh"
 
 
 if [ "X$1" == "X" ]; then
@@ -41,11 +42,11 @@ STORY_CONTEXT_PREAMBLE="Given the following prompt, if not already specified cho
 
 
 STORY_CONTEXT=$(suffix_asset "$STORY_ASSET" "context")
-generate_completion_from_preamble_and_context "$STORY_CONTEXT_PREAMBLE" "$USER_PROVIDED_CONTEXT" "$STORY_CONTEXT"
+openai_generate_completion_from_preamble_and_context "$STORY_CONTEXT_PREAMBLE" "$USER_PROVIDED_CONTEXT" "$STORY_CONTEXT"
 
 CHARACTER_LIST_PREAMBLE="Given the following context if there are roles representing a group of people, create two or three representative characters from that group. create a list of all characters in the story in csv format where the first column is a unix filename based on the full name of the character with spaces converted into underscores and is prefixed with character and has a .json extension.  The second column is the full name of the character.  The third column is a brief description of the character's role in the story."
 CHARACTER_LIST=$(sub_asset "$STORY_ASSET" "character_list")
-generate_completion_from_preamble_and_context "$CHARACTER_LIST_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_LIST"
+openai_generate_completion_from_preamble_and_context "$CHARACTER_LIST_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_LIST"
 
 CHARACTERS_ASSET=$(sub_asset "$STORY_ROOT_ASSET" characters)
 

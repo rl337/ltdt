@@ -167,7 +167,7 @@ http_json_dict_to_query_string() {
 }
 
 http_json_dict_to_header_params() {
-    _X_HEADERS=$(echo $1 | jq -r 'to_entries | map("\(.key): \(.value|tostring)" | @sh) | join(" -H ")')
+    _X_HEADERS=$(echo $1 | jq -r --raw-output 'to_entries | map("\(.key): \(.value|tostring)" | @sh) | join(" -H ")')
     if [ $? -ne 0 ]; then
         fatal "Could not parse headers from $1"
     fi
@@ -217,8 +217,12 @@ http_post() {
     _X_HEADERS=$(http_json_dict_to_header_params "$3")
     assert_zero $? "Could not create header params from $3"
 
-    "$CURL_EXE" -s $_X_HEADERS -d "$2" "$1" 
+    _X_POSTDATA_FILE="$TMPDIR/http_post_data.$$"
+    echo "$2" > "$_X_POSTDATA_FILE"
+    _X_CMD="$CURL_EXE -s $_X_HEADERS -d '@$_X_POSTDATA_FILE' '$1'"
+    bash -c "$_X_CMD"
     assert_zero $? "Could not POST to $1 with headers $3"
+    rm -f "$_X_POSTDATA_FILE"
 }
 
 fi

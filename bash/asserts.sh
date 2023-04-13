@@ -3,6 +3,19 @@ _X_ASSERTS_LIB_=true
 
 . "$BASH_DIR/logging.sh"
 
+
+# $1 = env_var string
+# $2 = message string
+assert_defined() {
+    if [ "X${!1}" == "X" ]; then
+        if "X$2" != "X" ]; then
+            fatal "$1 undefined: $2"
+        else
+            fatal "$1 undefined"
+        fi
+    fi
+}
+
 # $1 = param 1
 # $2 = param 2
 # $3 = message

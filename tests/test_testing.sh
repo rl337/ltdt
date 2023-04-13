@@ -9,6 +9,7 @@ fi
 
 . "$BASH_DIR/logging.sh"
 . "$BASH_DIR/asset_management.sh"
+. "$BASH_DIR/asserts.sh"
 . "$BASH_DIR/testing.sh"
 
 
@@ -26,6 +27,17 @@ test_setup() {
     if [ "X$TEST_SET_ENVIRONMENT" != "Xomg this works" ]; then
         fatal "setup should have set TEST_SET_ENVIRONMENT to 'omg this works'"
     fi
+}
+
+test_assert_defined() {
+    XYZ_ABC_1=defined
+    assert_defined XYZ_ABC_1 "XYZ_ABC_1 was JUST defined!"
+
+    (assert_defined XYZ_ABC_2 "XYZ_ABC_2 was actually NOT defined")
+    if [ $? -eq 0 ]; then
+        fatal "assert_defined should have failed for XYZ_ABC_2"
+    fi
+
 }
 
 test_assert_equal() {

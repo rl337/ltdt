@@ -33,9 +33,7 @@ assert_valid_asset() {
 }
 
 assert_valid_asset_root() {
-    if [ "X$ASSET_ROOT" == "X" ]; then
-        fatal "ASSET_ROOT must be set"
-    fi
+    assert_defined "ASSET_ROOT" "ASSET_ROOT must be set"
 
     if [ ! -d "$ASSET_ROOT" ]; then
         fatal "Asset root $ASSET_ROOT must be a valid directory"

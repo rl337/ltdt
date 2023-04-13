@@ -89,7 +89,7 @@ expect_openai_image() {
     http_expect_post "https://api.openai.com/v1/images/generations" "$_X_OPENAI_REQUEST" "$_X_OPENAI_HEADERS" "$_X_OPENAI_EXPECTED_RESPONSE"
 }
 
-test_openai() {   
+test_openai_alone() {   
     EXPECTED_RESPONSE='{"payload": "I am a fake response"}'
     EXPECTED_DATA='{"data": "this is my random post data "}'
     EXPECTED_HEADERS=$(jq -S -c -n --arg api_token "Bearer $OPENAI_API_KEY" '{"Content-Type": "application/json", "Authorization": $api_token}')
@@ -136,4 +136,4 @@ test_openai_generate_image_from_prompt() {
     assert_equal "$EXPECTED_IMAGE_BASE64" "$ACTUAL_IMAGE_BASE64"
 }
 
-run_all_tests
+run_all_tests "$@"

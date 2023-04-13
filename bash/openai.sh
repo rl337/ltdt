@@ -23,10 +23,14 @@ openai() {
         fatal "OPENAI_API_KEY environment variable must be set"
     fi
 
+    _X_POST_HEADERS=$(jq -n -S -c --raw-output \
+        --arg api_key "Bearer $OPENAI_API_KEY" \
+        '{"Content-Type": "application/json", "Authorization": $api_key}' \
+    )
     http_post \
         "$_X_FULL_API_URL" \
         "$2" \
-        "$(jq -n -S -c --arg api_key "Bearer $OPENAI_API_KEY" '{"Content-Type": "application/json", "Authorization": $api_key}')"
+        "$_X_POST_HEADERS"
     assert_zero $? "Could not post API request to $_X_FULL_API_URL"
 }
 
@@ -39,7 +43,7 @@ openai_completions() {
     _X_PROMPT_FILE=$(asset_path "$2")
     _X_PROMPT=$(cat "$_X_PROMPT_FILE")
 
-_X_DATA=$( jq -n -S -c \
+_X_DATA=$( jq -n -S -c --raw-output \
   --arg model "$1" \
   --arg prompt "$_X_PROMPT" \
   --arg max_tokens "$3" \
@@ -56,7 +60,7 @@ openai_images_generations() {
 
 _X_PROMPT_FILE=$(asset_path "$1")
 _X_PROMPT=$(cat "$_X_PROMPT_FILE")
-_X_DATA=$( jq -n -S -c \
+_X_DATA=$( jq -n -S -c --raw-output \
   --arg prompt "$_X_PROMPT" \
   --arg size "$2" \
   '{"prompt": $prompt, "n": 1, "size": $size, "response_format": "b64_json"}'

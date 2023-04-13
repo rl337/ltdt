@@ -23,6 +23,23 @@ test_http_get() {
     assert_string_match "$TEST_RAW" "http://example.com?a=1&b=foo%20%26%20bar"
 }
 
+test_http_post_echo() {
+    HTTP_TESTING=""
+    VALUE=maximum
+    TEST_PARAMS=$(jq -n -S -c --raw-output \
+        --arg api_key "Bearer $VALUE" \
+        '{"Content-Type": "application/json", "Authorization": $api_key}' \
+    )
+    TEST_RAW=$(CURL_EXE=echo http_post \
+        http://example.com \
+        '{"a": 1, "b": "foo & bar"}' \
+        "$TEST_PARAMS" \
+    )
+    assert_string_match "$TEST_RAW" "^-s"
+    assert_string_match "$TEST_RAW" "-H Authorization: Bearer maximum" # unfortunately echo strips the ''"
+    assert_string_match "$TEST_RAW" "http://example.com"
+}
+
 test_http_test_single_get() {
     EXPECTED_RESPONSE="omg this is it"
     http_expect_get "http://example.com/a/b" '{"a":1}' '{"Awesome":"true"}' "$EXPECTED_RESPONSE"
@@ -59,4 +76,4 @@ test_http_test_single_post() {
     assert_equal "$EXPECTED_RESPONSE" "$ACTUAL_RESPONSE" "Call response didn't match expected"
 }
 
-run_all_tests
+run_all_tests "$@"

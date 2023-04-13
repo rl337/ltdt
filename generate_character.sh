@@ -11,8 +11,6 @@ fi
 . "$BASH_DIR/asset_management.sh"
 . "$BASH_DIR/openai.sh"
 
-
-
 # $1 = character full name
 # $2 = attribute_list_file
 # $3 = portrait_file
@@ -129,12 +127,12 @@ info "Creating character: $CHARACTER_NAME"
 
 CHARACTER_CONTEXT=$(suffix_asset "$CHARACTER_ASSET" "context")
 CHARACTER_CONTEXT_PREAMBLE="given the following context describe the character $CHARACTER_NAME, their motivations their life before the story and their role in the story details should also include age, height, weight, sex, hair color, eye color, birth date, a zodiac sign consistent with their birth date, blood type, birth place and birth country. If their place of birth country is not in the setting of the story, describe why they left their birth country"
-generate_completion_from_preamble_and_context "$CHARACTER_CONTEXT_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_CONTEXT"
+openai_generate_completion_from_preamble_and_context "$CHARACTER_CONTEXT_PREAMBLE" "$STORY_CONTEXT" "$CHARACTER_CONTEXT"
 
 CHARACTER_ATTRIBUTES=$(suffix_asset "$CHARACTER_ASSET" "attributes")
 CHARACTER_ATTRIBUTES_LIST=$(suffix_asset "$CHARACTER_ATTRIBUTES" "list")
 CHARACTER_ATTRIBUTES_PREAMBLE="given the following character information create a list of character attributes in csv format list where the first column is the name of an attribute and the second column is the value based on the character description. The rows are name, age, sex, hair color, eye color, birthdate, zodiac sign, blood type, and birth place."
-generate_completion_from_preamble_and_context "$CHARACTER_ATTRIBUTES_PREAMBLE" "$CHARACTER_CONTEXT" "$CHARACTER_ATTRIBUTES_LIST"
+openai_generate_completion_from_preamble_and_context "$CHARACTER_ATTRIBUTES_PREAMBLE" "$CHARACTER_CONTEXT" "$CHARACTER_ATTRIBUTES_LIST"
 
 CHARACTER_DETAIL=$(suffix_asset "$CHARACTER_ASSET" "detail")
 
@@ -142,7 +140,7 @@ CHARACTER_DETAIL_CONTEXT=$(suffix_asset "$CHARACTER_DETAIL" "context")
 CHARACTER_DETAIL_PREAMBLE="given the following context describe the character $CHARACTER_NAME create a detailed physical description of the character including physical features that make them stand out as well as any possessions they will always have on themselves.  The description should also include clothing preferences. "
 CHARACTER_DETAIL_PROMPT=$(suffix_asset "$CHARACTER_DETAIL" "prompt")
 create_prompt_from_preamble_and_context "$CHARACTER_DETAIL_PROMPT" "$CHARACTER_DETAIL_PREAMBLE" "$CHARACTER_CONTEXT"
-generate_completion_from_prompt "$CHARACTER_DETAIL_PROMPT" "$CHARACTER_DETAIL_CONTEXT" 
+openai_generate_completion_from_prompt "$CHARACTER_DETAIL_PROMPT" "$CHARACTER_DETAIL_CONTEXT" 
 
 CHARACTER_PORTRAIT=$(suffix_asset "$CHARACTER_ASSET" "portrait")
 
@@ -150,13 +148,13 @@ CHARACTER_PORTRAIT_CONTEXT=$(suffix_asset "$CHARACTER_PORTRAIT" "context")
 CHARACTER_PORTRAIT_CONTEXT_PREAMBLE="write a DALL-E prompt for a portrait of the following person that is no longer than 900 characters long. "
 CHARACTER_PORTRAIT_CONTEXT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT_CONTEXT" "prompt")
 create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT_PREAMBLE" "$CHARACTER_DETAIL_CONTEXT"
-generate_completion_from_prompt "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT"
+openai_generate_completion_from_prompt "$CHARACTER_PORTRAIT_CONTEXT_PROMPT" "$CHARACTER_PORTRAIT_CONTEXT"
 
 CHARACTER_PORTRAIT_PREAMBLE="take a 35mm photographic portrait of the following character"
 CHARACTER_PORTRAIT_SUFFIX="nikon, prime lens, portrait photograph, 35mm, fujifilm, dramatic lighting, cinematic, 4k"
 CHARACTER_PORTRAIT_PROMPT=$(suffix_asset "$CHARACTER_PORTRAIT" "prompt")
 create_prompt_from_preamble_and_context "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT_PREAMBLE" "$CHARACTER_PORTRAIT_CONTEXT" "$CHARACTER_PORTRAIT_SUFFIX"
-generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT"
+openai_generate_image_from_prompt "$CHARACTER_PORTRAIT_PROMPT" "$CHARACTER_PORTRAIT"
 
 #CHARACTER_DOSSIER_NAME="${CHARACTER_FILE_PREFIX}_dossier"
 #write_character_sheet "$CHARACTER_NAME" "$CHARACTER_ATTRIBUTES_LIST" "$CHARACTER_PORTRAIT_FILE" "$CHARACTER_DETAIL_FILE" "$CHARACTER_CONTEXT_FILE" "$CHARACTER_DOSSIER_NAME"

@@ -64,6 +64,7 @@ teardown_99_testdir() {
     fi
 }
 
+# $1 test match
 run_all_tests() {
 
     _X_TESTS=$(list_all_tests)
@@ -71,12 +72,21 @@ run_all_tests() {
     _X_TEARDOWNS=$(list_all_teardown)
     _X_RAN=0
     _X_PASSED=0
+    _X_SKIPPED=0
     _X_FAILED=0
     for TEST_NAME in $_X_TESTS; do
 
         _X_TEST_RESULT=0
         _X_TEST_OUTPUT="$(
             LOG_NAME="$TEST_NAME"
+            if [ "X$1" != "X" ]; then
+                echo "$1" | grep "$TEST_NAME" 2>&1 > /dev/null
+                if [ $? -ne 0 ]; then
+                    echo "Skipping Unmatched $TEST_NAME"
+                    exit 0
+                fi
+            fi
+
             for _X_SETUP in $_X_SETUPS; do
                 $_X_SETUP 2>&1
                 if [ $? -ne 0 ]; then
@@ -98,7 +108,12 @@ run_all_tests() {
             _X_FAILED=$(expr $_X_FAILED + 1)
             _X_TEST_RESULT=1
         else
-            _X_PASSED=$(expr $_X_PASSED + 1)
+            echo "$_X_TEST_OUTPUT" | grep "Skipping Unmatched $TEST_NAME" 2>&1 > /dev/null
+            if [ $? -eq 0 ]; then
+                _X_SKIPPED=$(expr $_X_SKIPPED + 1)
+            else
+                _X_PASSED=$(expr $_X_PASSED + 1)
+            fi
         fi
 
         if [ $_X_TEST_RESULT -ne 0 ]; then
@@ -107,7 +122,7 @@ run_all_tests() {
         _X_RAN=$(expr $_X_RAN + 1)
     done
 
-    LOG_NAME=$0 info "test file: $0 passed $_X_PASSED/$_X_RAN ($_X_FAILED failures)"
+    LOG_NAME=$0 info "test file: $0 passed $_X_PASSED/$_X_RAN ($_X_FAILED failures, $_X_SKIPPED skipped)"
     return $_X_FAILED
 }
 
